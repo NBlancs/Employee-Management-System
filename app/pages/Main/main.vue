@@ -14,16 +14,31 @@ import {
   UsersIcon,
 } from '@heroicons/vue/24/outline'
 
-const activeTab = ref('overview')
+const route = useRoute()
+const router = useRouter()
+const authCookie = useCookie<string | null>('ems_auth')
+
+function getTabFromQuery(queryValue: unknown) {
+  if (Array.isArray(queryValue)) {
+    return queryValue[0] ?? undefined
+  }
+
+  if (typeof queryValue === 'string') {
+    return queryValue
+  }
+
+  return undefined
+}
+
+const activeTab = ref(getTabFromQuery(route.query.tab) || 'overview')
 const now = ref(new Date())
 const showSignInAlert = ref(false)
+const isLoginSkeletonVisible = ref(false)
 const isLogoutConfirmOpen = ref(false)
 const isLoggingOutOpen = ref(false)
 let timer: ReturnType<typeof setInterval> | null = null
 let alertTimer: ReturnType<typeof setTimeout> | null = null
-const route = useRoute()
-const router = useRouter()
-const authCookie = useCookie<string | null>('ems_auth')
+let loginSkeletonTimer: ReturnType<typeof setTimeout> | null = null
 
 const userInfo = {
   firstName: 'Filemon Jr.',
@@ -54,7 +69,7 @@ const formattedDate = computed(() => {
 const navItems = [
   { label: 'Dashboard', icon: HomeIcon, id: 'overview' },
   { label: 'Employees', icon: UsersIcon, id: 'employees' },
-  { label: 'Department & Salaries', icon:ShieldCheckIcon, id:'department-salaries'},
+  { label: 'Department & Salaries', icon:ShieldCheckIcon, id:'department'},
   { label: 'Attendance', icon: CalendarDaysIcon, id: 'attendance' },
   { label: 'Transactions', icon: ClockIcon, id: 'transactions' },
   { label: 'Reports', icon: ChartBarSquareIcon, id: 'reports' },
@@ -63,6 +78,15 @@ const navItems = [
 
 function setActiveTab(id: string) {
   activeTab.value = id
+
+  void router.replace({
+    path: route.path,
+    query: {
+      ...route.query,
+      tab: id,
+    },
+    hash: route.hash,
+  })
 }
 
 function toggleNotifications() {
@@ -92,10 +116,10 @@ onMounted(() => {
     now.value = new Date()
   }, 1000)
 
-  const loginQuery = Array.isArray(route.query.login) ? route.query.login[0] : route.query.login
+  const loginQuery = getTabFromQuery(route.query.login)
 
   if (loginQuery === 'success') {
-    showSignInAlert.value = true
+    isLoginSkeletonVisible.value = true
 
     const { login: _login, ...restQuery } = route.query
     void router.replace({
@@ -104,9 +128,14 @@ onMounted(() => {
       hash: route.hash,
     })
 
-    alertTimer = setTimeout(() => {
-      showSignInAlert.value = false
-    }, 3000)
+    loginSkeletonTimer = setTimeout(() => {
+      isLoginSkeletonVisible.value = false
+      showSignInAlert.value = true
+
+      alertTimer = setTimeout(() => {
+        showSignInAlert.value = false
+      }, 3000)
+    }, 2000)
   }
 })
 
@@ -118,11 +147,63 @@ onUnmounted(() => {
   if (alertTimer) {
     clearTimeout(alertTimer)
   }
+
+  if (loginSkeletonTimer) {
+    clearTimeout(loginSkeletonTimer)
+  }
 })
 </script>
 
 <template>
-  <div class="main-page">
+  <div v-if="isLoginSkeletonVisible" class="main-page main-page--skeleton" aria-busy="true" aria-live="polite">
+    <aside class="main-sidebar main-sidebar--skeleton">
+      <div>
+        <div class="brand-block brand-block--skeleton">
+          <div class="user-block user-block--skeleton">
+            <div class="avatar avatar--skeleton"></div>
+            <div class="user-info user-info--skeleton">
+              <div class="skeleton-line skeleton-line--lg"></div>
+              <div class="skeleton-line skeleton-line--sm"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="sidebar-divider"></div>
+
+        <div class="skeleton-nav">
+          <div v-for="item in 6" :key="item" class="skeleton-nav-item"></div>
+        </div>
+      </div>
+
+      <div class="sidebar-footer sidebar-footer--skeleton">
+        <div class="skeleton-nav-item skeleton-nav-item--short"></div>
+        <div class="skeleton-nav-item skeleton-nav-item--short"></div>
+      </div>
+    </aside>
+
+    <div class="main-shell main-shell--skeleton">
+      <header class="main-header main-header--skeleton">
+        <div class="skeleton-line skeleton-line--xl"></div>
+        <div class="header-right header-right--skeleton">
+          <div class="skeleton-line skeleton-line--md"></div>
+          <div class="skeleton-circle"></div>
+        </div>
+      </header>
+
+      <main class="main-content main-content--skeleton">
+        <div class="skeleton-card skeleton-card--hero"></div>
+
+        <div class="skeleton-grid">
+          <div v-for="item in 4" :key="item" class="skeleton-card"></div>
+        </div>
+
+        <div class="skeleton-card skeleton-card--table"></div>
+        <div class="skeleton-card skeleton-card--table"></div>
+      </main>
+    </div>
+  </div>
+
+  <div v-else class="main-page">
     <div class="signin-alert-wrap">
       <Alert
         v-if="showSignInAlert"
@@ -243,6 +324,155 @@ onUnmounted(() => {
   right: 20px;
   z-index: 1200;
   width: min(360px, calc(100vw - 20px));
+}
+
+.main-sidebar--skeleton,
+.main-shell--skeleton {
+  min-height: 0;
+}
+
+.main-sidebar--skeleton {
+  background: #ffffff;
+  border-right: 1px solid #dbe4ff;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.brand-block--skeleton {
+  min-height: 72px;
+}
+
+.user-block--skeleton {
+  align-items: center;
+}
+
+.avatar--skeleton {
+  background: #e2e8f0;
+}
+
+.user-info--skeleton {
+  width: 100%;
+  display: grid;
+  gap: 8px;
+}
+
+.skeleton-line,
+.skeleton-nav-item,
+.skeleton-card,
+.skeleton-circle {
+  background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 37%, #e2e8f0 63%);
+  background-size: 400% 100%;
+  animation: skeleton-shimmer 1.3s ease-in-out infinite;
+}
+
+.skeleton-line {
+  height: 12px;
+  border-radius: 999px;
+}
+
+.skeleton-line--lg {
+  width: 72%;
+  height: 14px;
+}
+
+.skeleton-line--md {
+  width: 110px;
+}
+
+.skeleton-line--xl {
+  width: 180px;
+  height: 18px;
+}
+
+.skeleton-line--sm {
+  width: 40%;
+}
+
+.skeleton-nav {
+  display: grid;
+  gap: 10px;
+  padding: 18px 16px 0;
+}
+
+.skeleton-nav-item {
+  height: 38px;
+  border-radius: 10px;
+}
+
+.skeleton-nav-item--short {
+  width: 88%;
+}
+
+.sidebar-footer--skeleton {
+  padding: 0 16px 12px;
+  display: grid;
+  gap: 10px;
+}
+
+.main-shell--skeleton {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  background-color: white;
+}
+
+.main-header--skeleton {
+  border-bottom: 1px solid #dbe4ff;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 20px;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(6px);
+}
+
+.header-right--skeleton {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.skeleton-circle {
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+}
+
+.main-content--skeleton {
+  padding: 20px;
+  display: grid;
+  gap: 16px;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.skeleton-card {
+  height: 92px;
+  border-radius: 14px;
+}
+
+.skeleton-card--hero {
+  height: 120px;
+}
+
+.skeleton-card--table {
+  height: 160px;
+}
+
+.skeleton-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: 0 0;
+  }
 }
 
 .logout-copy {

@@ -9,26 +9,35 @@ let loadingTimer: ReturnType<typeof setTimeout> | null = null
 
 const recentAttendances = [
   {
-    fullName: 'Dela Cruz, Juan',
+    fullName: 'Lascuña, Joel Kent',
     status: 'Present',
     time: '08:02 AM'
   },
   {
-    fullName: 'Santos, Maria',
+    fullName: 'Valle, Jayneth',
     status: 'Late',
     time: '08:21 AM'
   },
   {
-    fullName: 'Reyes, Carlo',
+    fullName: 'Maturan, Walter',
     status: 'Present',
     time: '07:56 AM'
   },
   {
-    fullName: 'Mendoza, Rafael',
+    fullName: 'Callo, Je-ann',
     status: 'Present',
     time: '08:06 AM'
   },
   
+]
+
+const recentTransactions = [
+  {
+    reference: '240005',
+    type: 'Employee Update',
+    by: 'HR',
+    dateTime: 'Apr 12, 2026 11:08 AM'
+  }
 ]
 
 const currentDate = new Date().toLocaleDateString(undefined, {
@@ -149,33 +158,32 @@ onUnmounted(() => {
       <table class="attendance-table" :aria-busy="isTableLoading ? 'true' : 'false'">
         <thead>
           <tr>
-            <th>Full Name</th>
-            <th class="status-header">Status</th>
-            <th>Time</th>
+            <th>Referenece #</th>
+            <th>Type</th>
+            <th>By</th>
+            <th>Date &amp; Time</th>
           </tr>
         </thead>
         <tbody>
           <tr v-if="isTableLoading" class="loading-row" role="status" aria-live="polite">
-            <td class="loading-cell" colspan="3">
+            <td class="loading-cell" colspan="4">
               <div class="loading-content">
                 <span class="table-spinner" aria-hidden="true"></span>
-                <span>Loading attendances...</span>
+                <span>Loading transactions...</span>
               </div>
             </td>
           </tr>
 
-          <tr v-for="attendance in isTableLoading ? [] : recentAttendances.slice(0, 5)" :key="`${attendance.fullName}-${attendance.time}`">
-            <td>{{ attendance.fullName }}</td>
-            <td class="status-cell-center">
-              <span class="status-badge" :class="getStatusClass(attendance.status)">
-                {{ attendance.status }}
-              </span>
-            </td>
-            <td>{{ attendance.time }}</td>
+          <tr v-for="transaction in isTableLoading ? [] : recentTransactions.slice(0, 5)" :key="transaction.reference">
+            <td>{{ transaction.reference }}</td>
+            <td>{{ transaction.type }}</td>
+            <td>{{ transaction.by }}</td>
+            <td>{{ transaction.dateTime }}</td>
           </tr>
         </tbody>
       </table>
     </div>
+
     
   </div>
 </template>
