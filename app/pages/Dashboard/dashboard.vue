@@ -306,27 +306,32 @@ onUnmounted(() => {
   padding: 4px 10px;
   border-radius: 999px;
   font-size: 0.75rem;
-  font-weight: 400;
+  font-weight: 200;
+  border: 1px solid transparent;
 }
 
 .status-badge--present {
   background: #dcfce7;
   color: #166534;
+  border-color: #bbf7d0;
 }
 
 .status-badge--late {
   background: #fef3c7;
   color: #92400e;
+  border-color: #fde047;
 }
 
 .status-badge--absent {
   background: #fee2e2;
   color: #991b1b;
+  border-color: #fecaca;
 }
 
 .status-badge--neutral {
-  background: #e2e8f0;
-  color: #334155;
+  background: #f3f4f6;
+  color: #374151;
+  border-color: #e5e7eb;
 }
 
 .overview-grid {

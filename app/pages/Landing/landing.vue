@@ -3,7 +3,7 @@ import { ref } from 'vue'
 import employeeLogo from '~/assets/svg/employee-logo.svg'
 
 const EXPECTED_USERNAME = 'admin'
-const EXPECTED_PASSWORD = 'admin123'
+const EXPECTED_PASSWORD = '123'
 
 const username = ref('')
 const password = ref('')

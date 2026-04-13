@@ -1,12 +1,42 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import Main from './main.vue';
 import Dashboard from '../Dashboard/dashboard.vue';
 import Employee from '../Employees/employee.vue';
+import NewEmployee from '../Employees/new-employee.vue';
 import Department from '../Departments/department.vue';
+import DepartmentInfo from '../Departments/department-info.vue';
 import Attendance from '../Attendance/attendance.vue';
 import Transactions from '../Transactions/transactions.vue';
 import Reports from '../Reports/reports.vue';
 import Settings from '../Settings/settings.vue';
+
+const selectedDepartmentId = ref<number | null>(null)
+const isCreatingEmployee = ref(false)
+const showSuccessAlert = ref(false)
+
+function openDepartmentInfo(departmentId: number) {
+    selectedDepartmentId.value = departmentId
+}
+
+function closeDepartmentInfo() {
+    selectedDepartmentId.value = null
+}
+
+function openNewEmployee() {
+    isCreatingEmployee.value = true
+}
+
+function closeNewEmployee() {
+    isCreatingEmployee.value = false
+}
+
+function onEmployeeCreated() {
+    showSuccessAlert.value = true
+    setTimeout(() => {
+        showSuccessAlert.value = false
+    }, 3000)
+}
 
 definePageMeta({
     middleware: 'middleware',
@@ -18,8 +48,24 @@ definePageMeta({
         <Main>
             <template #content="{ activeTab }">
                 <Dashboard v-if="activeTab === 'overview'" />
-                <Employee v-if="activeTab === 'employees'" />
-                <Department v-if="activeTab === 'department'" />
+                <Employee
+                    v-if="activeTab === 'employees' && !isCreatingEmployee"
+                    :show-success-alert="showSuccessAlert"
+                    @add-employee="openNewEmployee"
+                />
+                <NewEmployee
+                    v-if="activeTab === 'employees' && isCreatingEmployee"
+                    @back="closeNewEmployee"
+                    @employee-created="onEmployeeCreated"
+                />
+                <Department
+                    v-if="activeTab === 'department' && !selectedDepartmentId"
+                    @view-department="openDepartmentInfo"
+                />
+                <DepartmentInfo
+                    v-if="activeTab === 'department' && selectedDepartmentId"
+                    @back="closeDepartmentInfo"
+                />
                 <Attendance v-if="activeTab === 'attendance'"/>
                 <Transactions v-if="activeTab === 'transactions'"/>
                 <Reports v-if="activeTab === 'reports'"/>

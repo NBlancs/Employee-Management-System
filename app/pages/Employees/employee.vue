@@ -1,15 +1,49 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { PlusIcon, MagnifyingGlassIcon, FunnelIcon, EyeIcon, PencilSquareIcon, TrashIcon } from '@heroicons/vue/24/outline'
 import IconInput from '~/components/IconInput.vue'
 import Button from '~/components/Button.vue'
+import Badge from '~/components/Badge.vue'
+import CheckBox from '~/components/CheckBox.vue'
+import Alert from '~/components/Alert.vue'
+
+type EmployeeRow = {
+    id: number
+    name: string
+    cardStatus: 'Has Card' | 'No Card'
+    department: string
+}
+
+const props = defineProps<{
+    showSuccessAlert?: boolean
+    employees?: EmployeeRow[]
+}>()
+
+const emit = defineEmits<{
+    addEmployee: []
+}>()
 
 const searchQuery = ref('')
-const filterQuery = ref('')
 const departmentQuery = ref('')
+const noCardFilter = ref(false)
+const hasLoadedEmployeeTable = useState<boolean>('has-loaded-employee-table', () => false)
+const isTableLoading = ref(!hasLoadedEmployeeTable.value)
+let loadingTimer: ReturnType<typeof setTimeout> | null = null
 
 function onSearch() {
-    console.log('Searching employees:', searchQuery.value, 'Filter:', filterQuery.value, 'Department:', departmentQuery.value)
+    console.log('Searching employees:', searchQuery.value, 'Department:', departmentQuery.value)
+}
+
+function getFilteredEmployees() {
+    const data = tableEmployees.value
+
+    if (!noCardFilter.value) {
+        return data
+    }
+
+    return data.filter(employee => {
+        return employee.cardStatus === 'No Card'
+    })
 }
 
 function handleViewEmployee(employeeId: number) {
@@ -21,16 +55,40 @@ function handleDeleteEmployee(employeeId: number) {
 }
 
 function handleAddEmployee() {
-    console.log('Add employee')
+    emit('addEmployee')
+}
+
+function getCardBadgeColor(cardStatus: string) {
+    return cardStatus === 'Has Card' ? 'green' : 'red'
 }
 
 
-const employees = [
-    { id: 1, name: 'Lascuña, Joel Kent', position: 'Software Engineer', department: 'IT' },
-    { id: 2, name: 'Valle, Jayneth', position: 'HR Specialist', department: 'HR' },
-    { id: 3, name: 'Maturan, Walter', position: 'Financial Analyst', department: 'Finance' },
-    { id: 4, name: 'Callo, Je-ann', position: 'Project Manager', department: 'IT'},
+const defaultEmployees: EmployeeRow[] = [
+    { id: 1, name: 'Lascuña, Joel Kent', cardStatus: 'Has Card', department: 'IT' },
+    { id: 2, name: 'Valle, Jayneth', cardStatus: 'Has Card', department: 'HR' },
+    { id: 3, name: 'Maturan, Walter', cardStatus: 'No Card', department: 'Finance' },
+    { id: 4, name: 'Callo, Je-ann', cardStatus: 'Has Card', department: 'IT'},
 ]
+
+const tableEmployees = computed(() => props.employees ?? defaultEmployees)
+
+onMounted(() => {
+    if (hasLoadedEmployeeTable.value) {
+        isTableLoading.value = false
+        return
+    }
+
+    loadingTimer = setTimeout(() => {
+        isTableLoading.value = false
+        hasLoadedEmployeeTable.value = true
+    }, 1200)
+})
+
+onUnmounted(() => {
+    if (loadingTimer) {
+        clearTimeout(loadingTimer)
+    }
+})
 
 
 </script>
@@ -59,26 +117,21 @@ const employees = [
                 class="search-button"
             />
 
-            <div class="filter-dropdown">
-                <FunnelIcon class="filter-icon" />
-                <select v-model="filterQuery" class="filter-select" aria-label="Filter employee">
-                    <option value="">Position</option>
-                    <option value="HR">HR</option>
-                    <option value="IT">IT</option>
-                    <option value="Finance">Finance</option>
-                </select>
-                <span class="filter-caret" aria-hidden="true"></span>
-            </div>
+            <div class="department-and-card-filters">
+                <div class="department-dropdown">
+                    <FunnelIcon class="filter-icon" />
+                    <select v-model="departmentQuery" class="filter-select" aria-label="Filter by department">
+                        <option value="">Department</option>
+                        <option value="HR">HR</option>
+                        <option value="IT">IT</option>
+                        <option value="Finance">Finance</option>
+                    </select>
+                    <span class="filter-caret" aria-hidden="true"></span>
+                </div>
 
-            <div class="department-dropdown">
-                <FunnelIcon class="filter-icon" />
-                <select v-model="departmentQuery" class="filter-select" aria-label="Filter by department">
-                    <option value="">Department</option>
-                    <option value="HR">HR</option>
-                    <option value="IT">IT</option>
-                    <option value="Finance">Finance</option>
-                </select>
-                <span class="filter-caret" aria-hidden="true"></span>
+                <div class="card-filters" aria-label="Filter by card status">
+                    <CheckBox v-model="noCardFilter" label="No card" />
+                </div>
             </div>
             
 
@@ -87,20 +140,36 @@ const employees = [
         <div class="form-divider" aria-hidden="true"></div>
 
         <div class="employees-table-wrap">
-            <table class="employees-table">
+            <table class="employees-table" :aria-busy="isTableLoading ? 'true' : 'false'">
                 <thead>
                     <tr>
                         <th>Employee Name</th>
-                        <th>Position</th>
                         <th>Department</th>
+                        <th>ID Card</th>
                         <th class="actions-column">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <tr v-for="employee in employees" :key="employee.id">
+                    <tr v-if="isTableLoading" class="loading-row" role="status" aria-live="polite">
+                        <td class="loading-cell" colspan="4">
+                            <div class="loading-content">
+                                <span class="table-spinner" aria-hidden="true"></span>
+                                <span>Loading employees...</span>
+                            </div>
+                        </td>
+                    </tr>
+
+                    <tr v-for="employee in isTableLoading ? [] : getFilteredEmployees()" :key="employee.id">
                         <td>{{ employee.name }}</td>
-                        <td>{{ employee.position }}</td>
                         <td>{{ employee.department }}</td>
+                        <td>
+                            <Badge
+                                :label="employee.cardStatus"
+                                variant="subtle"
+                                size="sm"
+                                :color="getCardBadgeColor(employee.cardStatus)"
+                            />
+                        </td>
                         <td>
                             <div class="action-buttons">
                                 <button type="button" class="action-button action-button--view" :aria-label="`View ${employee.name}`" @click="handleViewEmployee(employee.id)">
@@ -126,7 +195,14 @@ const employees = [
             <PlusIcon class="floating-add-icon" />
         </button>
 
-        
+        <div v-if="props.showSuccessAlert" class="success-alert-container">
+            <Alert
+                title="Success"
+                message="Employee created successfully!"
+                variant="success"
+                :dismissible="false"
+            />
+        </div>
     </div>
 
     
@@ -155,6 +231,39 @@ const employees = [
     border: 1px solid #e5e7eb;
     border-radius: 12px;
     background: #ffffff;
+}
+
+.loading-cell {
+    height: 180px;
+    border-bottom: 0 !important;
+    padding: 0 !important;
+}
+
+.loading-content {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    color: #64748b;
+    font-size: 0.88rem;
+    text-align: center;
+}
+
+.table-spinner {
+    width: 24px;
+    height: 24px;
+    border: 3px solid #dbeafe;
+    border-top-color: #3b82f6;
+    border-radius: 999px;
+    animation: table-spin 0.8s linear infinite;
+}
+
+@keyframes table-spin {
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 .employees-table {
@@ -246,7 +355,7 @@ const employees = [
 
 .employee-search {
     display: grid;
-    grid-template-columns: 0.3fr auto 0.2fr 0.2fr;
+    grid-template-columns: 0.3fr auto minmax(220px, 0.45fr);
     align-items: end;
     justify-content: start;
     gap: 0.75rem;
@@ -263,7 +372,7 @@ const employees = [
 
 @media (max-width: 1024px) {
     .employee-search {
-        grid-template-columns: 1fr auto 1fr 1fr;
+        grid-template-columns: 1fr auto;
     }
 }
 
@@ -273,7 +382,7 @@ const employees = [
         gap: 0.5rem;
     }
 
-    .filter-dropdown {
+    .department-dropdown {
         width: 100%;
     }
 
@@ -296,7 +405,7 @@ const employees = [
         font-size: 0.8rem;
     }
 
-    .filter-dropdown {
+    .department-dropdown {
         width: 100%;
     }
 
@@ -312,11 +421,6 @@ const employees = [
 .search-icon {
     width: 16px;
     height: 16px;
-}
-
-.filter-dropdown {
-    position: relative;
-    width: 100%;
 }
 
 .filter-icon {
@@ -362,7 +466,39 @@ const employees = [
 
 .department-dropdown {
     position: relative;
-    width: 100%;
+    width: 180px;
+    max-width: 100%;
+    flex: 0 0 auto;
+}
+
+.department-and-card-filters {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.9rem;
+    width: auto;
+}
+
+.card-filters {
+    display: inline-flex;
+    align-items: center;
+    gap: 1.25rem;
+    min-height: 36px;
+}
+
+@media (max-width: 768px) {
+    .department-and-card-filters {
+        width: 100%;
+        flex-wrap: wrap;
+        align-items: flex-start;
+    }
+
+    .card-filters {
+        width: 100%;
+        justify-content: flex-start;
+        flex-wrap: wrap;
+        row-gap: 0.6rem;
+        column-gap: 1rem;
+    }
 }
 
 .floating-add-button {
@@ -403,6 +539,23 @@ const employees = [
     .floating-add-icon {
         width: 18px;
         height: 18px;
+    }
+}
+
+.success-alert-container {
+    position: fixed;
+    top: 24px;
+    right: 24px;
+    z-index: 50;
+    max-width: 400px;
+}
+
+@media (max-width: 640px) {
+    .success-alert-container {
+        top: 16px;
+        right: 16px;
+        left: 16px;
+        max-width: none;
     }
 }
 

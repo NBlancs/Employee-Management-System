@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import Department from './department.vue'
+import Department from './department-info.vue'
 </script>
 
 <template>

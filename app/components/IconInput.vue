@@ -69,7 +69,10 @@ const inputClasses = computed(() => ({
 
 <template>
   <div class="icon-input" :class="wrapperClasses">
-    <label v-if="label" class="icon-input__label" :for="id || undefined">{{ label }}</label>
+    <label v-if="label" class="icon-input__label" :for="id || undefined">
+      {{ label }}
+      <span v-if="required" class="icon-input__required" aria-label="required">*</span>
+    </label>
 
     <div class="icon-input__control">
       <span v-if="hasLeadingIcon" class="icon-input__leading" aria-hidden="true">
@@ -118,6 +121,11 @@ const inputClasses = computed(() => ({
   color: #1f2937;
   font-size: 0.875rem;
   font-weight: 500;
+}
+
+.icon-input__required {
+  color: #ef4444;
+  margin-left: 2px;
 }
 
 .icon-input__control {
