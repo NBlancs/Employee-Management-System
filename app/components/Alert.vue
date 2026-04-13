@@ -43,7 +43,7 @@ function closeAlert() {
 </script>
 
 <template>
-  <Transition name="alert-fade">
+  <Transition name="alert-slide">
     <section
       v-if="visible"
       class="app-alert"
@@ -150,14 +150,20 @@ function closeAlert() {
   color: #991b1b;
 }
 
-.alert-fade-enter-active,
-.alert-fade-leave-active {
-  transition: opacity 0.2s ease, transform 0.2s ease;
+.alert-slide-enter-active,
+.alert-slide-leave-active {
+  transition: opacity 0.22s ease, transform 0.22s ease;
 }
 
-.alert-fade-enter-from,
-.alert-fade-leave-to {
+.alert-slide-enter-from,
+.alert-slide-leave-to {
   opacity: 0;
-  transform: translateY(-4px);
+  transform: translateX(12px);
+}
+
+.alert-slide-enter-to,
+.alert-slide-leave-from {
+  opacity: 1;
+  transform: translateX(0);
 }
 </style>

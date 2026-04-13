@@ -49,7 +49,7 @@ async function onSubmit() {
 
     await new Promise((resolve) => setTimeout(resolve, 900))
     await navigateTo({
-      path: '/main',
+      path: '/main?login=success',
       query: { login: 'success' },
     })
     return

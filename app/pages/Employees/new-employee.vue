@@ -106,7 +106,6 @@ function confirmSubmit() {
 
             <div class="header-content">
                 <h1 class="new-employee-title">Create New Employee</h1>
-                <p class="header-subtitle">Fill in the employee information below</p>
             </div>
         </div>
 
@@ -173,7 +172,9 @@ function confirmSubmit() {
                             </select>
                         </div>
                         <IconInput v-model="form.birthdate" label="Birthdate" type="date" size="sm" required />
-                        <IconInput v-model="form.age" label="Age" type="number" placeholder="Enter age" size="sm" required />
+                        <div class="age-input-wrapper">
+                            <IconInput v-model="form.age" label="Age"placeholder="Enter age" size="sm" required />
+                        </div>
                     </div>
                 </div>
 
@@ -375,6 +376,10 @@ function confirmSubmit() {
     gap: 0.9rem;
 }
 
+.age-input-wrapper {
+    max-width: 120px;
+}
+
 .account-info-container {
     width: 100%;
     max-width: 360px;
@@ -412,6 +417,11 @@ function confirmSubmit() {
     padding: 8px 12px;
     outline: none;
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236B7280' d='M2.5 4.5l3.5 3 3.5-3'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 2rem;
 }
 
 .select-field:focus {
@@ -505,5 +515,17 @@ function confirmSubmit() {
     to {
         transform: rotate(360deg);
     }
+}
+
+/* Hide number input spinner */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none !important;
+    margin: 0 !important;
+    display: none !important;
+}
+
+input[type="number"] {
+    -moz-appearance: textfield !important;
 }
 </style>

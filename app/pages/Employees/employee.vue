@@ -21,6 +21,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
     addEmployee: []
+    viewEmployee: [employeeId: number]
 }>()
 
 const searchQuery = ref('')
@@ -47,7 +48,7 @@ function getFilteredEmployees() {
 }
 
 function handleViewEmployee(employeeId: number) {
-    console.log('View employee:', employeeId)
+    emit('viewEmployee', employeeId)
 }
 
 function handleDeleteEmployee(employeeId: number) {
