@@ -6,6 +6,7 @@ import Modal from '~/components/Modal.vue'
 
 const props = defineProps<{
     employeeId: number | null
+  employees?: EmployeeInfoRecord[]
 }>()
 
 type EmployeeInfoRecord = {
@@ -13,6 +14,8 @@ type EmployeeInfoRecord = {
   department: string
   position: string
   salary: number
+  shiftStart?: string
+  shiftEnd?: string
   firstName: string
   middleName: string
   lastName: string
@@ -30,12 +33,22 @@ type EmployeeInfoRecord = {
   cardNumber: string
 }
 
-const employeeDirectory: [EmployeeInfoRecord, ...EmployeeInfoRecord[]] = [
+type EmployeeTableRow = {
+  id: number
+  name: string
+  cardStatus: 'Has Card' | 'No Card'
+  department: string
+  cardNumber: string
+}
+
+const defaultEmployeeDirectory: [EmployeeInfoRecord, ...EmployeeInfoRecord[]] = [
   {
     id: 1,
     department: 'IT',
     position: 'Senior',
     salary: 48000,
+    shiftStart: '08:00 AM',
+    shiftEnd: '05:00 PM',
     firstName: 'Joel Kent',
     middleName: '',
     lastName: 'Lascuna',
@@ -57,6 +70,8 @@ const employeeDirectory: [EmployeeInfoRecord, ...EmployeeInfoRecord[]] = [
     department: 'HR',
     position: 'Manager',
     salary: 52000,
+    shiftStart: '09:00 AM',
+    shiftEnd: '06:00 PM',
     firstName: 'Jayneth',
     middleName: '',
     lastName: 'Valle',
@@ -78,6 +93,8 @@ const employeeDirectory: [EmployeeInfoRecord, ...EmployeeInfoRecord[]] = [
     department: 'Finance',
     position: 'Junior',
     salary: 28000,
+    shiftStart: '08:30 AM',
+    shiftEnd: '05:30 PM',
     firstName: 'Walter',
     middleName: '',
     lastName: 'Maturan',
@@ -99,6 +116,8 @@ const employeeDirectory: [EmployeeInfoRecord, ...EmployeeInfoRecord[]] = [
     department: 'IT',
     position: 'Intern',
     salary: 18000,
+    shiftStart: '08:00 AM',
+    shiftEnd: '05:00 PM',
     firstName: 'Je-ann',
     middleName: '',
     lastName: 'Callo',
@@ -117,24 +136,53 @@ const employeeDirectory: [EmployeeInfoRecord, ...EmployeeInfoRecord[]] = [
   },
 ]
 
+const sharedEmployeeRows = useState<EmployeeTableRow[]>('employees-table-rows', () => {
+  return defaultEmployeeDirectory.map(employee => ({
+    id: employee.id,
+    name: `${employee.lastName}, ${employee.firstName}`,
+    cardStatus: employee.cardStatus,
+    department: employee.department,
+    cardNumber: employee.cardNumber,
+  }))
+})
+
 const employee = computed(() => {
-  const foundEmployee = employeeDirectory.find(item => item.id === props.employeeId)
-  return foundEmployee ?? employeeDirectory[0]
+  const directory = (
+    props.employees && props.employees.length > 0
+      ? props.employees
+      : defaultEmployeeDirectory
+  ) as [EmployeeInfoRecord, ...EmployeeInfoRecord[]]
+  const foundEmployee = directory.find(item => item.id === props.employeeId)
+  return foundEmployee ?? directory[0]
 })
 
 const showUpdateModal = ref(false)
 const showUpdateConfirmModal = ref(false)
+const showPasswordConfirmModal = ref(false)
+const showCardConfirmModal = ref(false)
+const showScannerWaitingModal = ref(false)
+const showScannerRegisterModal = ref(false)
+const showScannedCardModal = ref(false)
 const showLoadingModal = ref(false)
 const showSuccessAlert = ref(false)
+const successAlertMessage = ref('Employee new department and position has been updated')
 const preserveUpdateSelection = ref(false)
 const showValidationAlert = ref(false)
+const validationAlertMessage = ref('Please select new department and new position')
 const selectedUpdateOption = ref('')
 const selectedDepartmentUpdate = ref('')
 const selectedDepartmentPositionUpdate = ref('')
 const selectedPositionUpdate = ref('')
+const selectedShiftStartUpdate = ref('')
+const selectedShiftEndUpdate = ref('')
+const selectedPasswordUpdate = ref('')
+const scannedRfidNumber = ref('')
+const pendingCardUpdate = ref<{ employeeId: number; cardStatus: 'Has Card' | 'No Card'; cardNumber: string } | null>(null)
 let validationAlertTimer: ReturnType<typeof setTimeout> | null = null
 let loadingModalTimer: ReturnType<typeof setTimeout> | null = null
 let successAlertTimer: ReturnType<typeof setTimeout> | null = null
+let scannerRegisterModeTimer: ReturnType<typeof setTimeout> | null = null
+let scannerCardScannedTimer: ReturnType<typeof setTimeout> | null = null
 
 watch(showUpdateModal, (isOpen) => {
   if (isOpen) {
@@ -151,6 +199,9 @@ watch(showUpdateModal, (isOpen) => {
     selectedDepartmentUpdate.value = ''
     selectedDepartmentPositionUpdate.value = ''
     selectedPositionUpdate.value = ''
+    selectedShiftStartUpdate.value = ''
+    selectedShiftEndUpdate.value = ''
+    selectedPasswordUpdate.value = ''
   }
 })
 
@@ -160,6 +211,8 @@ watch(showLoadingModal, (isOpen) => {
       clearTimeout(loadingModalTimer)
     }
     loadingModalTimer = setTimeout(() => {
+      applyPendingCardUpdateIfNeeded()
+
       showLoadingModal.value = false
       showSuccessAlert.value = true
       
@@ -174,8 +227,48 @@ watch(showLoadingModal, (isOpen) => {
   }
 })
 
+watch(showScannerWaitingModal, (isOpen) => {
+  if (isOpen) {
+    if (scannerRegisterModeTimer) {
+      clearTimeout(scannerRegisterModeTimer)
+    }
+
+    scannerRegisterModeTimer = setTimeout(() => {
+      showScannerWaitingModal.value = false
+      showScannerRegisterModal.value = true
+    }, 2500)
+    return
+  }
+
+  if (scannerRegisterModeTimer) {
+    clearTimeout(scannerRegisterModeTimer)
+    scannerRegisterModeTimer = null
+  }
+})
+
+watch(showScannerRegisterModal, (isOpen) => {
+  if (isOpen) {
+    if (scannerCardScannedTimer) {
+      clearTimeout(scannerCardScannedTimer)
+    }
+
+    scannerCardScannedTimer = setTimeout(() => {
+      scannedRfidNumber.value = `RFID-${Math.floor(100000 + Math.random() * 900000)}`
+      showScannerRegisterModal.value = false
+      showScannedCardModal.value = true
+    }, 2500)
+    return
+  }
+
+  if (scannerCardScannedTimer) {
+    clearTimeout(scannerCardScannedTimer)
+    scannerCardScannedTimer = null
+  }
+})
+
 const emit = defineEmits<{
     back: []
+  updateCardStatus: [payload: { employeeId: number; cardStatus: 'Has Card' | 'No Card'; cardNumber: string }]
 }>()
 
 function goBack() {
@@ -186,26 +279,106 @@ function handleUpdateEmployee() {
   showUpdateModal.value = true
 }
 
+function showErrorAlert(message: string) {
+  validationAlertMessage.value = message
+  showValidationAlert.value = true
+
+  if (validationAlertTimer) {
+    clearTimeout(validationAlertTimer)
+  }
+
+  validationAlertTimer = setTimeout(() => {
+    showValidationAlert.value = false
+  }, 3000)
+}
+
+function applyPendingCardUpdateIfNeeded() {
+  if (!pendingCardUpdate.value) {
+    return
+  }
+
+  const directory = props.employees?.length ? props.employees : defaultEmployeeDirectory
+  const foundEmployee = directory.find(item => item.id === pendingCardUpdate.value!.employeeId)
+  if (foundEmployee) {
+    foundEmployee.cardStatus = pendingCardUpdate.value.cardStatus
+    foundEmployee.cardNumber = pendingCardUpdate.value.cardNumber
+  }
+
+  sharedEmployeeRows.value = sharedEmployeeRows.value.map(employee => {
+    if (employee.id !== pendingCardUpdate.value!.employeeId) {
+      return employee
+    }
+
+    return {
+      ...employee,
+      cardStatus: pendingCardUpdate.value!.cardStatus,
+      cardNumber: pendingCardUpdate.value!.cardNumber,
+    }
+  })
+
+  emit('updateCardStatus', pendingCardUpdate.value)
+  pendingCardUpdate.value = null
+}
+
 function handleProceedUpdate() {
+  if (selectedUpdateOption.value === 'Password' && !selectedPasswordUpdate.value.trim()) {
+    showErrorAlert('Please enter a new password')
+    return
+  }
+
   if (
     selectedUpdateOption.value === 'Department' &&
     (!selectedDepartmentUpdate.value || !selectedDepartmentPositionUpdate.value)
   ) {
-    showValidationAlert.value = true
+    showErrorAlert('Please select new department and new position')
+    return
+  }
 
-    if (validationAlertTimer) {
-      clearTimeout(validationAlertTimer)
-    }
+  if (
+    selectedUpdateOption.value === 'Department' &&
+    selectedDepartmentUpdate.value === employee.value.department &&
+    selectedDepartmentPositionUpdate.value === employee.value.position
+  ) {
+    showErrorAlert('New department and role cannot be the same as current department and role')
 
-    validationAlertTimer = setTimeout(() => {
-      showValidationAlert.value = false
-    }, 3000)
+    return
+  }
 
+  if (
+    selectedUpdateOption.value === 'Shift' &&
+    (!selectedShiftStartUpdate.value || !selectedShiftEndUpdate.value)
+  ) {
+    showErrorAlert('Please select shift start and shift end')
+    return
+  }
+
+  if (
+    selectedUpdateOption.value === 'Shift' &&
+    selectedShiftStartUpdate.value === (employee.value.shiftStart ?? '') &&
+    selectedShiftEndUpdate.value === (employee.value.shiftEnd ?? '')
+  ) {
+    showErrorAlert('New shift schedule cannot be the same as current shift schedule')
     return
   }
 
   preserveUpdateSelection.value = true
   showUpdateModal.value = false
+
+  if (selectedUpdateOption.value === 'Password') {
+    showPasswordConfirmModal.value = true
+    return
+  }
+
+  if (selectedUpdateOption.value === 'Card' && employee.value.cardStatus === 'Has Card') {
+    showCardConfirmModal.value = true
+    return
+  }
+
+  if (selectedUpdateOption.value === 'Card' && employee.value.cardStatus === 'No Card') {
+    showScannerWaitingModal.value = true
+    return
+  }
+
   showUpdateConfirmModal.value = true
 }
 
@@ -229,17 +402,57 @@ function getSelectedNewPosition() {
   return employee.value.position
 }
 
+function getSelectedNewShiftStart() {
+  if (selectedUpdateOption.value === 'Shift') {
+    return selectedShiftStartUpdate.value
+  }
+
+  return employee.value.shiftStart ?? ''
+}
+
+function getSelectedNewShiftEnd() {
+  if (selectedUpdateOption.value === 'Shift') {
+    return selectedShiftEndUpdate.value
+  }
+
+  return employee.value.shiftEnd ?? ''
+}
+
 function closeConfirmModal() {
+  applyPendingCardUpdateIfNeeded()
+
   showUpdateConfirmModal.value = false
+  showPasswordConfirmModal.value = false
+  showCardConfirmModal.value = false
+  showScannerWaitingModal.value = false
+  showScannerRegisterModal.value = false
+  showScannedCardModal.value = false
+  showLoadingModal.value = false
   selectedUpdateOption.value = ''
   selectedDepartmentUpdate.value = ''
   selectedDepartmentPositionUpdate.value = ''
   selectedPositionUpdate.value = ''
+  selectedShiftStartUpdate.value = ''
+  selectedShiftEndUpdate.value = ''
+  selectedPasswordUpdate.value = ''
+  scannedRfidNumber.value = ''
 }
 
 function goBackFromConfirmModal() {
   preserveUpdateSelection.value = true
   showUpdateConfirmModal.value = false
+  showUpdateModal.value = true
+}
+
+function goBackFromPasswordConfirmModal() {
+  preserveUpdateSelection.value = true
+  showPasswordConfirmModal.value = false
+  showUpdateModal.value = true
+}
+
+function goBackFromCardConfirmModal() {
+  preserveUpdateSelection.value = true
+  showCardConfirmModal.value = false
   showUpdateModal.value = true
 }
 
@@ -249,19 +462,65 @@ function confirmUpdateSelection() {
   console.log('Old position:', employee.value.position)
   console.log('New department:', getSelectedNewDepartment())
   console.log('New position:', getSelectedNewPosition())
+  console.log('Old shift start:', employee.value.shiftStart)
+  console.log('Old shift end:', employee.value.shiftEnd)
+  console.log('New shift start:', getSelectedNewShiftStart())
+  console.log('New shift end:', getSelectedNewShiftEnd())
   
   // Update the employee data
-  const foundEmployee = employeeDirectory.find(item => item.id === props.employeeId)
+  const directory = props.employees?.length ? props.employees : defaultEmployeeDirectory
+  const foundEmployee = directory.find(item => item.id === props.employeeId)
   if (foundEmployee) {
     if (selectedUpdateOption.value === 'Department') {
       foundEmployee.department = selectedDepartmentUpdate.value
       foundEmployee.position = selectedDepartmentPositionUpdate.value
     } else if (selectedUpdateOption.value === 'Position') {
       foundEmployee.position = selectedPositionUpdate.value
+    } else if (selectedUpdateOption.value === 'Shift') {
+      foundEmployee.shiftStart = selectedShiftStartUpdate.value
+      foundEmployee.shiftEnd = selectedShiftEndUpdate.value
     }
   }
+
+  successAlertMessage.value = selectedUpdateOption.value === 'Shift'
+    ? 'Employee shift schedule has been updated'
+    : 'Employee new department and position has been updated'
   
   showUpdateConfirmModal.value = false
+  showLoadingModal.value = true
+}
+
+function confirmPasswordUpdate() {
+  console.log('Confirm update option:', selectedUpdateOption.value)
+  console.log('New password:', selectedPasswordUpdate.value)
+
+  successAlertMessage.value = 'Password update successfully'
+
+  showPasswordConfirmModal.value = false
+  showLoadingModal.value = true
+}
+
+function proceedCardRegistrationFromConfirm() {
+  showCardConfirmModal.value = false
+  showScannerWaitingModal.value = true
+}
+
+function confirmCardUpdate() {
+  console.log('Confirm update option:', selectedUpdateOption.value)
+  console.log('Scanned RFID number:', scannedRfidNumber.value)
+
+  if (props.employeeId !== null) {
+    pendingCardUpdate.value = {
+      employeeId: props.employeeId,
+      cardStatus: 'Has Card',
+      cardNumber: scannedRfidNumber.value || 'RFID-000000',
+    }
+  }
+
+  successAlertMessage.value = 'New card registered successfully'
+
+  showCardConfirmModal.value = false
+  showScannedCardModal.value = false
   showLoadingModal.value = true
 }
 
@@ -275,6 +534,12 @@ onUnmounted(() => {
   if (successAlertTimer) {
     clearTimeout(successAlertTimer)
   }
+  if (scannerRegisterModeTimer) {
+    clearTimeout(scannerRegisterModeTimer)
+  }
+  if (scannerCardScannedTimer) {
+    clearTimeout(scannerCardScannedTimer)
+  }
 })
 </script>
 
@@ -284,7 +549,7 @@ onUnmounted(() => {
       <Alert
         v-model:visible="showValidationAlert"
         title="Validation"
-        message="Please select new department and new position"
+        :message="validationAlertMessage"
         variant="error"
         :dismissible="false"
       />
@@ -330,6 +595,14 @@ onUnmounted(() => {
           <div class="info-item">
             <span class="label">Salary</span>
             <span class="value">₱{{ employee.salary.toLocaleString() }}</span>
+          </div>
+          <div class="info-item">
+            <span class="label">Shift Start</span>
+            <span class="value">{{ employee.shiftStart || 'N/A' }}</span>
+          </div>
+          <div class="info-item">
+            <span class="label">Shift End</span>
+            <span class="value">{{ employee.shiftEnd || 'N/A' }}</span>
           </div>
         </div>
       </div>
@@ -461,6 +734,7 @@ onUnmounted(() => {
             <option value="" disabled>Select Update Option</option>
             <option value="Department">Department</option>
             <option value="Password">Password</option>
+            <option value="Shift-Time">Shift Time</option>
             <option value="Card">Card</option>
           </select>
         </div>
@@ -499,6 +773,19 @@ onUnmounted(() => {
           </select>
         </div>
 
+        <div v-if="selectedUpdateOption === 'Password'" class="department-update-panel">
+          <label class="department-update-label" for="newPasswordInput">New password</label>
+          <input
+            id="newPasswordInput"
+            v-model="selectedPasswordUpdate"
+            class="department-update-select"
+            type="password"
+            aria-label="New Password"
+            placeholder="Enter new password"
+            autocomplete="new-password"
+          />
+        </div>
+
         <div v-if="selectedUpdateOption" class="update-proceed-wrap">
           <button
             type="button"
@@ -519,6 +806,15 @@ onUnmounted(() => {
       :show-footer="false"
     >
       <div class="confirm-modal-content">
+        <button
+          type="button"
+          class="update-modal-close-button"
+          aria-label="Close confirm update"
+          @click="closeConfirmModal"
+        >
+          <XMarkIcon class="update-modal-close-icon" />
+        </button>
+
         <button
           type="button"
           class="update-modal-back-button"
@@ -557,6 +853,195 @@ onUnmounted(() => {
     </Modal>
 
     <Modal
+      v-model:open="showPasswordConfirmModal"
+      :title="''"
+      :description="''"
+      :hide-trigger="true"
+      :show-footer="false"
+    >
+      <div class="confirm-modal-content">
+        <button
+          type="button"
+          class="update-modal-close-button"
+          aria-label="Close password confirmation"
+          @click="closeConfirmModal"
+        >
+          <XMarkIcon class="update-modal-close-icon" />
+        </button>
+
+        <button
+          type="button"
+          class="update-modal-back-button"
+          aria-label="Back to update options"
+          @click="goBackFromPasswordConfirmModal"
+        >
+          <ArrowLeftIcon class="update-modal-back-icon" />
+        </button>
+
+        <h3 class="update-modal-title">Confirm Password Update</h3>
+        <p class="password-confirm-message">Are you sure you want to change the password?</p>
+
+        <div class="password-confirm-actions">
+          <button
+            type="button"
+            class="update-proceed-button update-proceed-button--secondary"
+            @click="goBackFromPasswordConfirmModal"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            class="update-proceed-button"
+            @click="confirmPasswordUpdate"
+          >
+            Confirm
+          </button>
+        </div>
+      </div>
+    </Modal>
+
+    <Modal
+      v-model:open="showCardConfirmModal"
+      :title="''"
+      :description="''"
+      :hide-trigger="true"
+      :show-footer="false"
+    >
+      <div class="confirm-modal-content">
+        <button
+          type="button"
+          class="update-modal-close-button"
+          aria-label="Close card confirmation"
+          @click="closeConfirmModal"
+        >
+          <XMarkIcon class="update-modal-close-icon" />
+        </button>
+
+        <button
+          type="button"
+          class="update-modal-back-button"
+          aria-label="Back to update options"
+          @click="goBackFromCardConfirmModal"
+        >
+          <ArrowLeftIcon class="update-modal-back-icon" />
+        </button>
+
+        <h3 class="update-modal-title">Confirm Card Registration</h3>
+        <p class="password-confirm-message">This employee has a card already.</p>
+        <p class="password-confirm-message">Current Card Number: {{ employee.cardNumber || 'N/A' }}</p>
+        <p class="password-confirm-message">Are you sure you want to register new card?</p>
+
+        <div class="password-confirm-actions">
+          <button
+            type="button"
+            class="update-proceed-button update-proceed-button--secondary"
+            @click="goBackFromCardConfirmModal"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            class="update-proceed-button"
+            @click="proceedCardRegistrationFromConfirm"
+          >
+            Confirm
+          </button>
+        </div>
+      </div>
+    </Modal>
+
+    <Modal
+      v-model:open="showScannerWaitingModal"
+      :title="''"
+      :description="''"
+      :hide-trigger="true"
+      :show-footer="false"
+      :dismissible="false"
+    >
+      <div class="loading-modal-content">
+        <button
+          type="button"
+          class="update-modal-close-button"
+          aria-label="Close scanner waiting"
+          @click="closeConfirmModal"
+        >
+          <XMarkIcon class="update-modal-close-icon" />
+        </button>
+        <div class="spinner"></div>
+        <p class="loading-text">Please switch the scanner into register mode.</p>
+      </div>
+    </Modal>
+
+    <Modal
+      v-model:open="showScannerRegisterModal"
+      :title="''"
+      :description="''"
+      :hide-trigger="true"
+      :show-footer="false"
+      :dismissible="false"
+    >
+      <div class="scanner-register-content">
+        <button
+          type="button"
+          class="update-modal-close-button"
+          aria-label="Close scanner register mode"
+          @click="closeConfirmModal"
+        >
+          <XMarkIcon class="update-modal-close-icon" />
+        </button>
+        <div class="scanner-card-icon-wrap" aria-hidden="true">
+          <div class="scanner-scan-line"></div>
+          <svg class="scanner-card-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="3" y="6" width="18" height="12" rx="2" stroke="currentColor" stroke-width="1.7" />
+            <path d="M3 10.5H21" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
+            <path d="M7.5 14.5H10.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
+          </svg>
+        </div>
+        <p class="loading-text">Please scan your RFID card.</p>
+      </div>
+    </Modal>
+
+    <Modal
+      v-model:open="showScannedCardModal"
+      :title="''"
+      :description="''"
+      :hide-trigger="true"
+      :show-footer="false"
+    >
+      <div class="confirm-modal-content">
+        <button
+          type="button"
+          class="update-modal-close-button"
+          aria-label="Close scanned card modal"
+          @click="closeConfirmModal"
+        >
+          <XMarkIcon class="update-modal-close-icon" />
+        </button>
+
+        <h3 class="update-modal-title">Card Scanned</h3>
+        <p class="password-confirm-message">RFID Number</p>
+        <p class="rfid-code">{{ scannedRfidNumber || 'RFID-000000' }}</p>
+
+        <div class="password-confirm-actions">
+          <button
+            type="button"
+            class="update-proceed-button update-proceed-button--secondary"
+            @click="closeConfirmModal"
+          >
+            Close
+          </button>
+          <button
+            type="button"
+            class="update-proceed-button"
+            @click="confirmCardUpdate"
+          >
+            Confirm
+          </button>
+        </div>
+      </div>
+    </Modal>
+
+    <Modal
       v-model:open="showLoadingModal"
       :title="''"
       :description="''"
@@ -565,6 +1050,14 @@ onUnmounted(() => {
       :dismissible="false"
     >
       <div class="loading-modal-content">
+        <button
+          type="button"
+          class="update-modal-close-button"
+          aria-label="Close loading"
+          @click="closeConfirmModal"
+        >
+          <XMarkIcon class="update-modal-close-icon" />
+        </button>
         <div class="spinner"></div>
         <p class="loading-text">Updating Please wait</p>
       </div>
@@ -574,7 +1067,7 @@ onUnmounted(() => {
       <Alert
         v-model:visible="showSuccessAlert"
         title="Success"
-        message="Employee new department and position has been updated"
+        :message="successAlertMessage"
         variant="success"
         :dismissible="false"
       />
@@ -937,6 +1430,43 @@ onUnmounted(() => {
   color: #374151;
 }
 
+.password-confirm-message {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #374151;
+  text-align: center;
+}
+
+.rfid-code {
+  margin: 0;
+  padding: 0.55rem 0.75rem;
+  border: 1px dashed #93c5fd;
+  border-radius: 10px;
+  background: #eff6ff;
+  color: #1e3a8a;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-align: center;
+}
+
+.password-confirm-actions {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.update-proceed-button--secondary {
+  border-color: #fecaca;
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.update-proceed-button--secondary:hover {
+  background: #fee2e2;
+}
+
 @media (max-width: 640px) {
   .confirm-grid {
     grid-template-columns: 1fr;
@@ -961,6 +1491,7 @@ onUnmounted(() => {
 }
 
 .loading-modal-content {
+  position: relative;
   width: 100%;
   display: flex;
   flex-direction: column;
@@ -971,9 +1502,49 @@ onUnmounted(() => {
   text-align: center;
 }
 
+.scanner-register-content {
+  position: relative;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 2rem 1rem;
+  text-align: center;
+}
+
+.scanner-card-icon-wrap {
+  position: relative;
+  width: 80px;
+  height: 60px;
+  display: grid;
+  place-items: center;
+  color: #1d4ed8;
+  border-radius: 14px;
+  background: #eff6ff;
+  overflow: hidden;
+}
+
+.scanner-card-icon {
+  width: 44px;
+  height: 44px;
+  animation: card-pulse 1.2s ease-in-out infinite;
+}
+
+.scanner-scan-line {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  height: 2px;
+  background: rgba(29, 78, 216, 0.55);
+  box-shadow: 0 0 8px rgba(59, 130, 246, 0.8);
+  animation: scan-line-move 1.8s linear infinite;
+}
+
 .spinner {
-  width: 48px;
-  height: 48px;
+  width: 40px;
+  height: 40px;
   border: 4px solid #e5e7eb;
   border-top-color: #635bff;
   border-radius: 50%;
@@ -982,14 +1553,38 @@ onUnmounted(() => {
 
 .loading-text {
   margin: 0;
-  font-size: 1rem;
+  font-size: 0.875rem;
   color: #4b5563;
-  font-weight: 500;
+  font-weight: 200;
 }
 
 @keyframes spin {
   to {
     transform: rotate(360deg);
+  }
+}
+
+@keyframes card-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.08);
+    opacity: 1;
+  }
+}
+
+@keyframes scan-line-move {
+  0% {
+    top: 10px;
+  }
+  50% {
+    top: 48px;
+  }
+  100% {
+    top: 10px;
   }
 }
 </style>

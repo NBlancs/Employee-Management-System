@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ArrowLeftIcon } from '@heroicons/vue/24/outline'
-import { ref } from 'vue'
+import { onUnmounted, ref } from 'vue'
+import Alert from '~/components/Alert.vue'
 import IconInput from '~/components/IconInput.vue'
 import Button from '~/components/Button.vue'
 import Modal from '~/components/Modal.vue'
@@ -19,6 +20,8 @@ const emit = defineEmits<{
 const form = ref({
     department: '',
     position: '',
+    shiftStart: '',
+    shiftEnd: '',
     firstName: '',
     middleName: '',
     lastName: '',
@@ -38,7 +41,9 @@ const form = ref({
 
 const showConfirmModal = ref(false)
 const showLoadingModal = ref(false)
-const usernameError = ref('')
+const showValidationAlert = ref(false)
+const validationAlertMessage = ref('')
+let validationAlertTimer: ReturnType<typeof setTimeout> | null = null
 const existingUsernames = useState<string[]>('employee-usernames', () => [
     'joel.kent',
     'jayneth.valle',
@@ -50,23 +55,130 @@ function normalizeUsername(value: string) {
     return value.trim().toLowerCase()
 }
 
+function parseShiftTimeToMinutes(value: string) {
+    const match = value.match(/^(\d{1,2}):(\d{2})\s?(AM|PM)$/i)
+    if (!match) {
+        return null
+    }
+
+    const hoursPart = match[1]
+    const minutesPart = match[2]
+    const meridiemPart = match[3]
+
+    if (!hoursPart || !minutesPart || !meridiemPart) {
+        return null
+    }
+
+    let hours = Number.parseInt(hoursPart, 10)
+    const minutes = Number.parseInt(minutesPart, 10)
+    const meridiem = meridiemPart.toUpperCase()
+
+    if (hours === 12) {
+        hours = 0
+    }
+
+    if (meridiem === 'PM') {
+        hours += 12
+    }
+
+    return hours * 60 + minutes
+}
+
+function formatMinutesToMeridiem(totalMinutes: number) {
+    const normalizedMinutes = ((totalMinutes % (24 * 60)) + (24 * 60)) % (24 * 60)
+    const hours24 = Math.floor(normalizedMinutes / 60)
+    const minutes = normalizedMinutes % 60
+    const meridiem = hours24 >= 12 ? 'PM' : 'AM'
+    const hours12 = hours24 % 12 || 12
+    const paddedMinutes = String(minutes).padStart(2, '0')
+
+    return `${String(hours12).padStart(2, '0')}:${paddedMinutes} ${meridiem}`
+}
+
+function handleShiftStartChange() {
+    const startMinutes = parseShiftTimeToMinutes(form.value.shiftStart)
+    if (startMinutes === null) {
+        form.value.shiftEnd = ''
+        return
+    }
+
+    form.value.shiftEnd = formatMinutesToMeridiem(startMinutes + 8 * 60)
+}
+
 function goBack() {
     emit('back')
 }
 
-function handleSubmit() {
-    const normalizedUsername = normalizeUsername(form.value.username)
+function showErrorAlert(message: string) {
+    validationAlertMessage.value = message
+    showValidationAlert.value = true
 
-    if (existingUsernames.value.includes(normalizedUsername)) {
-        usernameError.value = 'Username already exists'
+    if (validationAlertTimer) {
+        clearTimeout(validationAlertTimer)
+    }
+
+    validationAlertTimer = setTimeout(() => {
+        showValidationAlert.value = false
+    }, 3000)
+}
+
+function validateBasicFields() {
+    const ageValue = String(form.value.age).trim()
+    const contactNumberValue = form.value.contactNumber.trim()
+    const zipCodeValue = form.value.zipCode.trim()
+
+    if (!/^\d+$/.test(ageValue)) {
+        showErrorAlert('Age must be a valid number')
+        return false
+    }
+
+    if (!/^\d{11}$/.test(contactNumberValue)) {
+        showErrorAlert('Contact number must be exactly 11 digits')
+        return false
+    }
+
+    if (!/^\d{4}$/.test(zipCodeValue)) {
+        showErrorAlert('Zip code must be exactly 4 digits')
+        return false
+    }
+
+    return true
+}
+
+function handleSubmit() {
+    if (!validateBasicFields()) {
         return
     }
 
-    usernameError.value = ''
+    const startMinutes = parseShiftTimeToMinutes(form.value.shiftStart)
+    const endMinutes = parseShiftTimeToMinutes(form.value.shiftEnd)
+
+    if (startMinutes === null || endMinutes === null) {
+        showErrorAlert('Please select shift start and shift end')
+        return
+    }
+
+    if (endMinutes <= startMinutes || endMinutes - startMinutes !== 8 * 60) {
+        showErrorAlert('Shift duration must be exactly 8 hours')
+        return
+    }
+
+    const normalizedUsername = normalizeUsername(form.value.username)
+
+    if (existingUsernames.value.includes(normalizedUsername)) {
+        showErrorAlert('Username already exists')
+        return
+    }
+
     showConfirmModal.value = true
 }
 
 function confirmSubmit() {
+    if (!validateBasicFields()) {
+        showConfirmModal.value = false
+        return
+    }
+
     showConfirmModal.value = false
     showLoadingModal.value = true
     
@@ -90,10 +202,26 @@ function confirmSubmit() {
         emit('back')
     }, 1500)
 }
+
+onUnmounted(() => {
+    if (validationAlertTimer) {
+        clearTimeout(validationAlertTimer)
+    }
+})
 </script>
 
 <template>
     <div class="new-employee-page">
+        <div v-if="showValidationAlert" class="validation-alert-wrap">
+            <Alert
+                v-model:visible="showValidationAlert"
+                title="Validation"
+                :message="validationAlertMessage"
+                variant="error"
+                :dismissible="false"
+            />
+        </div>
+
         <div class="new-employee-header">
             <button
                 type="button"
@@ -109,7 +237,7 @@ function confirmSubmit() {
             </div>
         </div>
 
-        <form class="new-employee-form" @submit.prevent="handleSubmit">
+        <form class="new-employee-form" novalidate @submit.prevent="handleSubmit">
             <div class="form-card">
                 <div class="form-section">
                     <h2 class="section-title">Job Information</h2>
@@ -132,6 +260,33 @@ function confirmSubmit() {
                                 <option value="Senior">Senior</option>
                                 <option value="Junior">Junior</option>
                                 <option value="Intern">Intern</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <h3 class="subsection-title">Shift Time</h3>
+                    <div class="new-employee-grid">
+                        <div class="select-field-wrap">
+                            <label class="select-field-label" for="shiftStart">Shift Start <span class="required-indicator">*</span></label>
+                            <select id="shiftStart" v-model="form.shiftStart" class="select-field" aria-label="Shift Start" required @change="handleShiftStartChange">
+                                <option value="">Select shift start</option>
+                                <option value="07:00 AM">07:00 AM</option>
+                                <option value="08:00 AM">08:00 AM</option>
+                                <option value="08:30 AM">08:30 AM</option>
+                                <option value="09:00 AM">09:00 AM</option>
+                                <option value="10:00 AM">10:00 AM</option>
+                            </select>
+                        </div>
+                        <div class="select-field-wrap">
+                            <label class="select-field-label" for="shiftEnd">Shift End <span class="required-indicator">*</span></label>
+                            <select id="shiftEnd" v-model="form.shiftEnd" class="select-field" aria-label="Shift End" required>
+                                <option value="">Select shift end</option>
+                                <option value="03:00 PM">03:00 PM</option>
+                                <option value="04:00 PM">04:00 PM</option>
+                                <option value="04:30 PM">04:30 PM</option>
+                                <option value="05:00 PM">05:00 PM</option>
+                                <option value="06:00 PM">06:00 PM</option>
+                                <option value="07:00 PM">07:00 PM</option>
                             </select>
                         </div>
                     </div>
@@ -173,7 +328,7 @@ function confirmSubmit() {
                         </div>
                         <IconInput v-model="form.birthdate" label="Birthdate" type="date" size="sm" required />
                         <div class="age-input-wrapper">
-                            <IconInput v-model="form.age" label="Age"placeholder="Enter age" size="sm" required />
+                            <IconInput v-model="form.age" label="Age" type="number" placeholder="Enter age" size="sm" required />
                         </div>
                     </div>
                 </div>
@@ -186,7 +341,16 @@ function confirmSubmit() {
                         <IconInput v-model="form.province" label="Province" placeholder="Enter province" size="sm" required />
                         <IconInput v-model="form.city" label="City" placeholder="Enter city" size="sm" required />
                         <IconInput v-model="form.barangay" label="Barangay" placeholder="Enter barangay" size="sm" required />
-                        <IconInput v-model="form.zipCode" label="Zip Code" placeholder="Enter zip code" size="sm" required />
+                        <IconInput
+                            v-model="form.zipCode"
+                            label="Zip Code"
+                            placeholder="Enter zip code"
+                            size="sm"
+                            required
+                            inputmode="numeric"
+                            maxlength="4"
+                            pattern="[0-9]{4}"
+                        />
                     </div>
                 </div>
 
@@ -195,7 +359,17 @@ function confirmSubmit() {
                 <div class="form-section">
                     <h2 class="section-title">Contact Details</h2>
                     <div class="new-employee-grid">
-                        <IconInput v-model="form.contactNumber" label="Contact Number" type="tel" placeholder="Enter contact number" size="sm" required />
+                        <IconInput
+                            v-model="form.contactNumber"
+                            label="Contact Number"
+                            type="tel"
+                            placeholder="Enter contact number"
+                            size="sm"
+                            required
+                            inputmode="numeric"
+                            maxlength="11"
+                            pattern="[0-9]{11}"
+                        />
                     </div>
                 </div>
 
@@ -209,9 +383,7 @@ function confirmSubmit() {
                             label="Username"
                             placeholder="Enter username"
                             size="sm"
-                            :error="usernameError"
                             required
-                            @update:modelValue="usernameError = ''"
                         />
                         <IconInput v-model="form.password" label="Password" type="password" placeholder="Enter password" size="sm" required />
                         <IconInput v-model="form.confirmPassword" label="Re-enter Password" type="password" placeholder="Re-enter password" size="sm" required />
@@ -245,6 +417,8 @@ function confirmSubmit() {
                     <h4 class="section-header">Job Information</h4>
                     <p><strong>Department:</strong> {{ form.department || 'Not selected' }}</p>
                     <p><strong>Position:</strong> {{ form.position || 'Not selected' }}</p>
+                    <p><strong>Shift Start:</strong> {{ form.shiftStart || 'Not selected' }}</p>
+                    <p><strong>Shift End:</strong> {{ form.shiftEnd || 'Not selected' }}</p>
                 </div>
                 <div class="confirmation-section">
                     <h4 class="section-header">Personal Information</h4>
@@ -269,7 +443,7 @@ function confirmSubmit() {
 
         <Modal
             v-model:open="showLoadingModal"
-            title="Processing"
+            title=""
             :dismissible="false"
             :hideTrigger="true"
         >
@@ -288,6 +462,14 @@ function confirmSubmit() {
     align-content: start;
     gap: 1.5rem;
     max-width: 1200px;
+}
+
+.validation-alert-wrap {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    z-index: 1100;
+    width: min(100%, 420px);
 }
 
 .new-employee-header {
@@ -359,6 +541,13 @@ function confirmSubmit() {
 .section-title {
     margin: 0;
     font-size: 1rem;
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.subsection-title {
+    margin: 0.75rem 0 0;
+    font-size: 0.95rem;
     font-weight: 600;
     color: #1f2937;
 }
@@ -439,6 +628,17 @@ function confirmSubmit() {
     width: 160px;
 }
 
+:deep(.app-modal) {
+    width: min(100%, 760px);
+    max-height: calc(100vh - 2rem);
+    display: flex;
+    flex-direction: column;
+}
+
+:deep(.app-modal__body) {
+    overflow-y: auto;
+}
+
 @media (max-width: 1100px) {
     .new-employee-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -461,12 +661,20 @@ function confirmSubmit() {
 
 .confirmation-content {
     display: grid;
+    grid-template-columns: 1fr;
     gap: 1rem;
+    max-height: min(62vh, 560px);
+    overflow-y: auto;
+    padding-right: 0.25rem;
 }
 
 .confirmation-section {
     display: grid;
     gap: 0.5rem;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 0.85rem;
+    background: #f8fafc;
 }
 
 .section-header {
@@ -484,6 +692,29 @@ function confirmSubmit() {
 
 .confirmation-section p strong {
     color: #374151;
+}
+
+@media (max-width: 900px) {
+    .confirmation-content {
+        max-height: min(58vh, 520px);
+    }
+}
+
+@media (max-width: 640px) {
+    :deep(.app-modal) {
+        width: min(100%, 96vw);
+        padding: 12px;
+    }
+
+    .confirmation-content {
+        max-height: min(56vh, 460px);
+        gap: 0.75rem;
+        padding-right: 0.15rem;
+    }
+
+    .confirmation-section {
+        padding: 0.75rem;
+    }
 }
 
 .loading-modal-content {
@@ -507,7 +738,7 @@ function confirmSubmit() {
 .loading-text {
     margin: 0;
     font-size: 1rem;
-    font-weight: 500;
+    font-weight: 200;
     color: #1f2937;
 }
 
@@ -517,7 +748,6 @@ function confirmSubmit() {
     }
 }
 
-/* Hide number input spinner */
 input[type="number"]::-webkit-outer-spin-button,
 input[type="number"]::-webkit-inner-spin-button {
     -webkit-appearance: none !important;
@@ -525,7 +755,4 @@ input[type="number"]::-webkit-inner-spin-button {
     display: none !important;
 }
 
-input[type="number"] {
-    -moz-appearance: textfield !important;
-}
 </style>

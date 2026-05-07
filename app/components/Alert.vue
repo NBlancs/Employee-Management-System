@@ -81,9 +81,6 @@ function closeAlert() {
         </p>
       </div>
 
-      <button v-if="dismissible" type="button" class="app-alert__close" aria-label="Dismiss alert" @click="closeAlert">
-        x
-      </button>
     </section>
   </Transition>
 </template>

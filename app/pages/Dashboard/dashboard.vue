@@ -158,9 +158,9 @@ onUnmounted(() => {
       <table class="attendance-table" :aria-busy="isTableLoading ? 'true' : 'false'">
         <thead>
           <tr>
-            <th>Referenece #</th>
-            <th>Type</th>
-            <th>By</th>
+            <th>Transaction No.</th>
+            <th>Classification</th>
+            <th>Processed By</th>
             <th>Date &amp; Time</th>
           </tr>
         </thead>

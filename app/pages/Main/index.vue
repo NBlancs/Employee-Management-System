@@ -7,7 +7,7 @@ import NewEmployee from '../Employees/new-employee.vue';
 import EmployeeInfo from '../Employees/employee-info.vue';
 import Department from '../Departments/department.vue';
 import DepartmentInfo from '../Departments/department-info.vue';
-import Attendance from '../Attendance/attendance.vue';
+import Attendance from '../Attendance/index.vue';
 import Transactions from '../Transactions/transactions.vue';
 import Reports from '../Reports/reports.vue';
 import Settings from '../Settings/settings.vue';
@@ -17,8 +17,8 @@ const selectedEmployeeId = ref<number | null>(null)
 const isCreatingEmployee = ref(false)
 const showSuccessAlert = ref(false)
 
-function openDepartmentInfo(departmentId: number) {
-    selectedDepartmentId.value = departmentId
+function openDepartmentInfo(departmentId: { id: number; name: string; head: string }) {
+    selectedDepartmentId.value = departmentId.id
 }
 
 function closeDepartmentInfo() {
@@ -77,11 +77,11 @@ definePageMeta({
                     @back="closeEmployeeInfo"
                 />
                 <Department
-                    v-if="activeTab === 'department' && !selectedDepartmentId"
+                    v-if="activeTab === 'departments' && !selectedDepartmentId"
                     @view-department="openDepartmentInfo"
                 />
                 <DepartmentInfo
-                    v-if="activeTab === 'department' && selectedDepartmentId"
+                    v-if="activeTab === 'departments' && selectedDepartmentId"
                     @back="closeDepartmentInfo"
                 />
                 <Attendance v-if="activeTab === 'attendance'"/>

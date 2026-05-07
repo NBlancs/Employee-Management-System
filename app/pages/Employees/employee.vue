@@ -1,17 +1,19 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { PlusIcon, MagnifyingGlassIcon, FunnelIcon, EyeIcon, PencilSquareIcon, TrashIcon } from '@heroicons/vue/24/outline'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { PlusIcon, MagnifyingGlassIcon, EyeIcon, TrashIcon } from '@heroicons/vue/24/outline'
 import IconInput from '~/components/IconInput.vue'
 import Button from '~/components/Button.vue'
 import Badge from '~/components/Badge.vue'
 import CheckBox from '~/components/CheckBox.vue'
 import Alert from '~/components/Alert.vue'
+import Modal from '~/components/Modal.vue'
 
 type EmployeeRow = {
     id: number
     name: string
     cardStatus: 'Has Card' | 'No Card'
     department: string
+    cardNumber: string
 }
 
 const props = defineProps<{
@@ -22,37 +24,54 @@ const props = defineProps<{
 const emit = defineEmits<{
     addEmployee: []
     viewEmployee: [employeeId: number]
+    deleteEmployee: [employeeId: number]
 }>()
 
 const searchQuery = ref('')
 const departmentQuery = ref('')
 const noCardFilter = ref(false)
+const isExactSearchMode = ref(false)
 const hasLoadedEmployeeTable = useState<boolean>('has-loaded-employee-table', () => false)
 const isTableLoading = ref(!hasLoadedEmployeeTable.value)
+const deleteModal = ref(false)
+const deleteLoadingModal = ref(false)
+const employeeIdToDelete = ref<number | null>(null)
+const showDeleteSuccessAlert = ref(false)
 let loadingTimer: ReturnType<typeof setTimeout> | null = null
+let deleteTimer: ReturnType<typeof setTimeout> | null = null
+let deleteAlertTimer: ReturnType<typeof setTimeout> | null = null
 
-function onSearch() {
-    console.log('Searching employees:', searchQuery.value, 'Department:', departmentQuery.value)
-}
+const filteredEmployees = computed(() => {
+    const query = normalizeSearchValue(searchQuery.value)
 
-function getFilteredEmployees() {
-    const data = tableEmployees.value
+    return tableEmployees.value.filter((employee) => {
+        const searchCandidates = getEmployeeSearchCandidates(employee)
 
-    if (!noCardFilter.value) {
-        return data
-    }
+                const matchesSearch =
+                        query.length === 0
+                                ? true
+                                : isExactSearchMode.value
+                    ? searchCandidates.some(candidate => candidate === query)
+                    : searchCandidates.some(candidate => candidate.includes(query))
 
-    return data.filter(employee => {
-        return employee.cardStatus === 'No Card'
+        const matchesDepartment =
+            departmentQuery.value.length === 0 ||
+            employee.department === departmentQuery.value
+
+        const matchesNoCard = !noCardFilter.value || employee.cardStatus === 'No Card'
+
+        return matchesSearch && matchesDepartment && matchesNoCard
     })
-}
+})
 
 function handleViewEmployee(employeeId: number) {
     emit('viewEmployee', employeeId)
 }
 
+
 function handleDeleteEmployee(employeeId: number) {
-    console.log('Delete employee:', employeeId)
+    employeeIdToDelete.value = employeeId
+    deleteModal.value = true
 }
 
 function handleAddEmployee() {
@@ -63,15 +82,107 @@ function getCardBadgeColor(cardStatus: string) {
     return cardStatus === 'Has Card' ? 'green' : 'red'
 }
 
+function cancelDelete() {
+    employeeIdToDelete.value = null
+    deleteModal.value = false
+}
+
+function confirmDelete() {
+    if (employeeIdToDelete.value === null) {
+        deleteModal.value = false
+        return
+    }
+
+    deleteModal.value = false
+    deleteLoadingModal.value = true
+
+    if (deleteTimer) {
+        clearTimeout(deleteTimer)
+    }
+
+    deleteTimer = setTimeout(() => {
+        if (employeeIdToDelete.value === null) {
+            deleteLoadingModal.value = false
+            return
+        }
+
+        if (props.employees) {
+            emit('deleteEmployee', employeeIdToDelete.value)
+        } else {
+            sharedEmployeeRows.value = sharedEmployeeRows.value.filter(employee => employee.id !== employeeIdToDelete.value)
+        }
+
+        employeeIdToDelete.value = null
+        deleteLoadingModal.value = false
+        showDeleteSuccessAlert.value = true
+
+        if (deleteAlertTimer) {
+            clearTimeout(deleteAlertTimer)
+        }
+
+        deleteAlertTimer = setTimeout(() => {
+            showDeleteSuccessAlert.value = false
+        }, 3000)
+    }, 1200)
+}
+
 
 const defaultEmployees: EmployeeRow[] = [
-    { id: 1, name: 'Lascuña, Joel Kent', cardStatus: 'Has Card', department: 'IT' },
-    { id: 2, name: 'Valle, Jayneth', cardStatus: 'Has Card', department: 'HR' },
-    { id: 3, name: 'Maturan, Walter', cardStatus: 'No Card', department: 'Finance' },
-    { id: 4, name: 'Callo, Je-ann', cardStatus: 'Has Card', department: 'IT'},
+    { id: 1, name: 'Lascuña, Joel Kent', cardStatus: 'Has Card', department: 'IT', cardNumber: 'IDC-IT-1001' },
+    { id: 2, name: 'Valle, Jayneth', cardStatus: 'Has Card', department: 'HR', cardNumber: 'IDC-HR-1002' },
+    { id: 3, name: 'Maturan, Walter', cardStatus: 'No Card', department: 'Finance', cardNumber: '' },
+    { id: 4, name: 'Callo, Je-ann', cardStatus: 'Has Card', department: 'IT', cardNumber: 'IDC-IT-1004' },
 ]
 
-const tableEmployees = computed(() => props.employees ?? defaultEmployees)
+const sharedEmployeeRows = useState<EmployeeRow[]>('employees-table-rows', () => defaultEmployees)
+
+watch(() => props.employees, (employees) => {
+    if (!employees || employees.length === 0) {
+        return
+    }
+
+    sharedEmployeeRows.value = employees
+}, { immediate: true })
+
+const tableEmployees = computed(() => props.employees ?? sharedEmployeeRows.value)
+
+function normalizeSearchValue(value: string) {
+    return value
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/\s+/g, ' ')
+        .trim()
+}
+
+function getEmployeeSearchCandidates(employee: EmployeeRow) {
+    const [lastNameRaw = '', firstNameRaw = ''] = employee.name.split(',')
+    const normalizedLastName = normalizeSearchValue(lastNameRaw)
+    const normalizedFirstNameFull = normalizeSearchValue(firstNameRaw)
+    const normalizedFirstName = normalizedFirstNameFull.split(' ')[0] ?? ''
+
+    return [
+        normalizeSearchValue(employee.name),
+        normalizedFirstName,
+        normalizedFirstNameFull,
+        normalizedLastName,
+        normalizeSearchValue(employee.department),
+        normalizeSearchValue(employee.cardNumber),
+        normalizeSearchValue(employee.cardStatus),
+    ].filter(Boolean)
+}
+
+function onSearch() {
+    isExactSearchMode.value = true
+}
+
+function clearDepartmentFilter() {
+    departmentQuery.value = ''
+}
+
+watch(searchQuery, () => {
+    isExactSearchMode.value = false
+})
 
 onMounted(() => {
     if (hasLoadedEmployeeTable.value) {
@@ -88,6 +199,14 @@ onMounted(() => {
 onUnmounted(() => {
     if (loadingTimer) {
         clearTimeout(loadingTimer)
+    }
+
+    if (deleteTimer) {
+        clearTimeout(deleteTimer)
+    }
+
+    if (deleteAlertTimer) {
+        clearTimeout(deleteAlertTimer)
     }
 })
 
@@ -119,15 +238,24 @@ onUnmounted(() => {
             />
 
             <div class="department-and-card-filters">
-                <div class="department-dropdown">
-                    <FunnelIcon class="filter-icon" />
-                    <select v-model="departmentQuery" class="filter-select" aria-label="Filter by department">
-                        <option value="">Department</option>
-                        <option value="HR">HR</option>
-                        <option value="IT">IT</option>
-                        <option value="Finance">Finance</option>
-                    </select>
-                    <span class="filter-caret" aria-hidden="true"></span>
+                <div class="department-filter-control">
+                    <div class="department-dropdown">
+                        <select v-model="departmentQuery" class="filter-select" aria-label="Filter by department">
+                            <option value="">Department</option>
+                            <option value="HR">HR</option>
+                            <option value="IT">IT</option>
+                            <option value="Finance">Finance</option>
+                        </select>
+                    </div>
+
+                    <button
+                        v-if="departmentQuery"
+                        type="button"
+                        class="clear-filter-button"
+                        @click="clearDepartmentFilter"
+                    >
+                        Clear
+                    </button>
                 </div>
 
                 <div class="card-filters" aria-label="Filter by card status">
@@ -160,7 +288,7 @@ onUnmounted(() => {
                         </td>
                     </tr>
 
-                    <tr v-for="employee in isTableLoading ? [] : getFilteredEmployees()" :key="employee.id">
+                    <tr v-for="employee in isTableLoading ? [] : filteredEmployees" :key="employee.id">
                         <td>{{ employee.name }}</td>
                         <td>{{ employee.department }}</td>
                         <td>
@@ -204,7 +332,52 @@ onUnmounted(() => {
                 :dismissible="false"
             />
         </div>
+
+        <div v-if="showDeleteSuccessAlert" class="success-alert-container">
+            <Alert
+                title="Success"
+                message="Employee deleted successfully!"
+                variant="success"
+                :dismissible="false"
+            />
+        </div>
     </div>
+
+    <Modal
+        v-model:open="deleteModal"
+        :hide-trigger="true"
+        :show-footer="false"
+        title=""
+        description=""
+    >
+        <div class="delete-modal">
+            <p class="delete-modal__text">Are you sure you want to delete?</p>
+
+            <div class="delete-modal__actions">
+                <button type="button" class="delete-modal__button delete-modal__button--subtle" @click="cancelDelete">
+                    No
+                </button>
+
+                <button type="button" class="delete-modal__button delete-modal__button--danger" @click="confirmDelete">
+                    Yes, Delete
+                </button>
+            </div>
+        </div>
+    </Modal>
+
+    <Modal
+        v-model:open="deleteLoadingModal"
+        :hide-trigger="true"
+        :show-footer="false"
+        :dismissible="false"
+        title=""
+        description=""
+    >
+        <div class="delete-loading-modal">
+            <span class="delete-loading-modal__spinner" aria-hidden="true"></span>
+            <p class="delete-loading-modal__text">Deleting Employee</p>
+        </div>
+    </Modal>
 
     
 </template>
@@ -364,8 +537,9 @@ onUnmounted(() => {
 
 .search-button {
     margin-inline: 0;
+    width: 96px;
     min-height: 36px;
-    padding: 8px 14px;
+    padding: 8px 10px;
     font-size: 0.8rem;
 }
 
@@ -389,7 +563,7 @@ onUnmounted(() => {
 
     .search-button {
         min-height: 36px;
-        padding: 8px 12px;
+        padding: 8px 10px;
         font-size: 0.8rem;
     }
 }
@@ -402,8 +576,9 @@ onUnmounted(() => {
 
     .search-button {
         width: 100%;
-        padding: 8px 12px;
-        font-size: 0.8rem;
+        min-height: 38px;
+        padding: 8px 10px;
+        font-size: 0.82rem;
     }
 
     .department-dropdown {
@@ -424,17 +599,6 @@ onUnmounted(() => {
     height: 16px;
 }
 
-.filter-icon {
-    position: absolute;
-    left: 12px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 16px;
-    height: 16px;
-    color: #6b7280;
-    pointer-events: none;
-}
-
 .filter-select {
     width: 100%;
     min-height: 36px;
@@ -443,26 +607,19 @@ onUnmounted(() => {
     background-color: #ffffff;
     color: #111827;
     font-size: 0.875rem;
-    padding: 8px 36px 8px 36px;
+    padding: 8px 12px;
     appearance: none;
     outline: none;
-}
-
-.filter-caret {
-    position: absolute;
-    right: 14px;
-    top: 50%;
-    width: 8px;
-    height: 8px;
-    border-right: 2px solid #6b7280;
-    border-bottom: 2px solid #6b7280;
-    transform: translateY(-65%) rotate(45deg);
-    pointer-events: none;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236B7280' d='M2.5 4.5l3.5 3 3.5-3'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 2rem;
 }
 
 .filter-select:focus {
-    border-color: #6366f1;
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+    border-color: #635bff;
+    box-shadow: 0 0 0 3px rgba(99, 91, 255, 0.2);
 }
 
 .department-dropdown {
@@ -479,6 +636,32 @@ onUnmounted(() => {
     width: auto;
 }
 
+.department-filter-control {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: nowrap;
+}
+
+.clear-filter-button {
+    min-height: 32px;
+    width: auto;
+    padding: 7px 10px;
+    border: 1px solid #d1d5db;
+    border-radius: 10px;
+    background: #ffffff;
+    color: #334155;
+    font-size: 0.8rem;
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.clear-filter-button:hover {
+    background: #f8fafc;
+    border-color: #94a3b8;
+}
+
 .card-filters {
     display: inline-flex;
     align-items: center;
@@ -491,6 +674,10 @@ onUnmounted(() => {
         width: 100%;
         flex-wrap: wrap;
         align-items: flex-start;
+    }
+
+    .department-filter-control {
+        width: auto;
     }
 
     .card-filters {
@@ -549,6 +736,88 @@ onUnmounted(() => {
     right: 24px;
     z-index: 50;
     max-width: 400px;
+}
+
+.delete-modal {
+    display: grid;
+    justify-items: center;
+    gap: 1rem;
+    text-align: center;
+    padding: 0.35rem 0.2rem 0.1rem;
+}
+
+.delete-modal__text {
+    margin: 0;
+    font-size: 0.98rem;
+    color: #374151;
+    line-height: 1.5;
+}
+
+.delete-modal__actions {
+    display: flex;
+    justify-content: center;
+    gap: 0.75rem;
+    width: 100%;
+}
+
+.delete-modal__button {
+    min-width: 110px;
+    border-radius: 10px;
+    border: 1px solid transparent;
+    padding: 9px 14px;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.delete-modal__button--subtle {
+    color: #2563eb;
+    background: #eff6ff;
+    border-color: #dbeafe;
+}
+
+.delete-modal__button--subtle:hover {
+    background: #e5e7eb;
+}
+
+.delete-modal__button--danger {
+    background: #fef2f2;
+    border-color: #fecaca;
+    color: #b91c1c;
+}
+
+.delete-modal__button--danger:hover {
+    background: #fee2e2;
+}
+
+.delete-loading-modal {
+    display: grid;
+    justify-items: center;
+    gap: 0.85rem;
+    padding: 0.4rem 0.2rem;
+    text-align: center;
+}
+
+.delete-loading-modal__spinner {
+    width: 28px;
+    height: 28px;
+    border-radius: 999px;
+    border: 3px solid #dbeafe;
+    border-top-color: #3b82f6;
+    animation: delete-spin 0.8s linear infinite;
+}
+
+.delete-loading-modal__text {
+    margin: 0;
+    font-size: 0.95rem;
+    color: #000000;
+    font-weight: 200;
+}
+
+@keyframes delete-spin {
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 @media (max-width: 640px) {

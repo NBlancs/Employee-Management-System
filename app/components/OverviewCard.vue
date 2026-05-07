@@ -17,6 +17,7 @@ interface Props {
   value: string | number
   bgColor?: string
   iconBgColor?: string
+  iconStroke?: string
   iconColor?: string
 }
 
@@ -33,6 +34,8 @@ withDefaults(defineProps<Props>(), {
   align-items: center;
   gap: 1rem;
   padding: 1.5rem;
+  height: 100%;
+  box-sizing: border-box;
   border-radius: 0.5rem;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }

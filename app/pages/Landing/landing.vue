@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import employeeLogo from '~/assets/svg/employee-logo.svg'
+import { UsersIcon, ClockIcon, CalendarDaysIcon, CreditCardIcon } from '@heroicons/vue/24/outline'
 
 const EXPECTED_USERNAME = 'admin'
 const EXPECTED_PASSWORD = '123'
@@ -49,7 +50,7 @@ async function onSubmit() {
 
     await new Promise((resolve) => setTimeout(resolve, 900))
     await navigateTo({
-      path: '/main?login=success',
+      path: '/main?login=success&tab=dashboard',
       query: { login: 'success' },
     })
     return
@@ -72,12 +73,53 @@ definePageMeta({
 
     <div class="content">
       <div class="left-side">
-        <h1>“Know who’s in, when it matters.”</h1>
-        <p>
-          Our Employee Attendance Monitoring System gives you 
-          real-time insights, automates attendance tracking, and
-          helps you run a smarter, more efficient workplace.
-        </p>
+        <div class="left-side-content">
+          <h1>"Know who's in, when it matters."</h1>
+          <p>
+            Our Employee Attendance Monitoring System gives you 
+            real-time insights, automates attendance tracking, and
+            helps you run a smarter, more efficient workplace.
+          </p>
+        </div>
+
+        <div class="icon-scatter">
+          <div class="scattered-icon scattered-icon--sm scatter-pos-1">
+            <UsersIcon class="icon" />
+          </div>
+          <div class="scattered-icon scattered-icon--md scatter-pos-2">
+            <ClockIcon class="icon" />
+          </div>
+          <div class="scattered-icon scattered-icon--sm scatter-pos-3">
+            <CalendarDaysIcon class="icon" />
+          </div>
+          <div class="scattered-icon scattered-icon--lg scatter-pos-4">
+            <CreditCardIcon class="icon" />
+          </div>
+          <div class="scattered-icon scattered-icon--sm scatter-pos-5">
+            <UsersIcon class="icon" />
+          </div>
+          <div class="scattered-icon scattered-icon--md scatter-pos-6">
+            <ClockIcon class="icon" />
+          </div>
+          <div class="scattered-icon scattered-icon--sm scatter-pos-7">
+            <CalendarDaysIcon class="icon" />
+          </div>
+          <div class="scattered-icon scattered-icon--md scatter-pos-8">
+            <CreditCardIcon class="icon" />
+          </div>
+          <div class="scattered-icon scattered-icon--sm scatter-pos-9">
+            <UsersIcon class="icon" />
+          </div>
+          <div class="scattered-icon scattered-icon--lg scatter-pos-10">
+            <ClockIcon class="icon" />
+          </div>
+          <div class="scattered-icon scattered-icon--sm scatter-pos-11">
+            <CalendarDaysIcon class="icon" />
+          </div>
+          <div class="scattered-icon scattered-icon--md scatter-pos-12">
+            <CreditCardIcon class="icon" />
+          </div>
+        </div>
       </div>
 
       <div class="right-side">
@@ -154,3 +196,178 @@ definePageMeta({
     </Modal>
   </div>
 </template>
+
+<style scoped>
+.left-side {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+.left-side-content {
+  position: relative;
+  z-index: 2;
+  max-width: 500px;
+  text-align: left;
+  padding-left: 20px;
+}
+
+.left-side h1 {
+  font-size: clamp(1.5rem, 4vw, 2.5rem);
+  line-height: 1.2;
+  color: #635bff;
+  margin-bottom: 1.5rem;
+}
+
+.left-side p {
+  font-size: 1rem;
+  line-height: 1.6;
+  color: #848484;
+}
+
+.icon-scatter {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+}
+
+.scattered-icon {
+  position: absolute;
+  width: 72px;
+  height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  opacity: 0.3;
+}
+
+.scattered-icon--sm {
+  width: 56px;
+  height: 56px;
+}
+
+.scattered-icon--md {
+  width: 72px;
+  height: 72px;
+}
+
+.scattered-icon--lg {
+  width: 92px;
+  height: 92px;
+}
+
+.scattered-icon .icon {
+  width: 34px;
+  height: 34px;
+  color: #635bff;
+}
+
+.scattered-icon--sm .icon {
+  width: 26px;
+  height: 26px;
+}
+
+.scattered-icon--lg .icon {
+  width: 42px;
+  height: 42px;
+}
+
+.scatter-pos-1 {
+  top: 8%;
+  left: 4%;
+}
+
+.scatter-pos-2 {
+  top: 20%;
+  left: 26%;
+}
+
+.scatter-pos-3 {
+  top: 6%;
+  right: 18%;
+}
+
+.scatter-pos-4 {
+  top: 28%;
+  right: 2%;
+}
+
+.scatter-pos-5 {
+  top: 42%;
+  left: 2%;
+}
+
+.scatter-pos-6 {
+  top: 56%;
+  left: 20%;
+}
+
+.scatter-pos-7 {
+  top: 48%;
+  right: 24%;
+}
+
+.scatter-pos-8 {
+  top: 60%;
+  right: 4%;
+}
+
+.scatter-pos-9 {
+  bottom: 18%;
+  left: 8%;
+}
+
+.scatter-pos-10 {
+  bottom: 6%;
+  left: 30%;
+}
+
+.scatter-pos-11 {
+  bottom: 12%;
+  right: 26%;
+}
+
+.scatter-pos-12 {
+  bottom: 4%;
+  right: 6%;
+}
+
+.login-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.login-header h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.login-header p {
+  margin: 0;
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+.welcome-logo {
+  width: 48px;
+  height: 48px;
+}
+
+.right-side {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #fff;
+}
+</style>

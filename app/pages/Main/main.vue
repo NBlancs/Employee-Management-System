@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import Alert from '~/components/Alert.vue'
 import Modal from '~/components/Modal.vue'
 import {
@@ -73,12 +73,19 @@ const formattedDate = computed(() => {
 const navItems = [
   { label: 'Dashboard', icon: HomeIcon, id: 'overview' },
   { label: 'Employees', icon: UsersIcon, id: 'employees' },
-  { label: 'Department & Salaries', icon:ShieldCheckIcon, id:'department'},
+  { label: 'Departments', icon:ShieldCheckIcon, id:'departments'},
   { label: 'Attendance', icon: CalendarDaysIcon, id: 'attendance' },
   { label: 'Transactions', icon: ClockIcon, id: 'transactions' },
   { label: 'Reports', icon: ChartBarSquareIcon, id: 'reports' },
   
 ]
+
+// Watch for route query changes
+watch(() => route.query.tab, (newTab) => {
+  if (newTab) {
+    activeTab.value = Array.isArray(newTab) ? newTab[0] : newTab
+  }
+})
 
 function setActiveTab(id: string) {
   activeTab.value = id

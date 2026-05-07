@@ -1,38 +1,168 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { MagnifyingGlassIcon, EyeIcon, TrashIcon, FunnelIcon, PlusIcon } from '@heroicons/vue/24/outline'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { MagnifyingGlassIcon, EyeIcon, TrashIcon, PlusIcon, XMarkIcon } from '@heroicons/vue/24/outline'
 import IconInput from '~/components/IconInput.vue'
 import Button from '~/components/Button.vue'
+import Modal from '~/components/Modal.vue'
+import Alert from '~/components/Alert.vue'
+import Input from '~/components/Input.vue'
 
 const emit = defineEmits<{
-    viewDepartment: [departmentId: number]
+    viewDepartment: [department: { id: number; name: string; head: string }]
 }>()
+
+const selectedDepartment = useState<{ id: number; name: string; head: string } | null>(
+    'selected-department-info',
+    () => null,
+)
 
 const searchQuery = ref('')
 const departmentFilter = ref('')
 const appliedSearchQuery = ref('')
 const appliedDepartmentFilter = ref('')
+const isAddDepartmentModalOpen = ref(false)
+const isConfirmAddDepartmentModalOpen = ref(false)
+const isAddDepartmentLoadingModalOpen = ref(false)
+const isDeleteDepartmentModalOpen = ref(false)
+const isDeleteDepartmentLoadingModalOpen = ref(false)
+const newDepartmentName = ref('')
+const hasDepartmentNameError = ref(false)
+const isDuplicateDepartmentAlertVisible = ref(false)
+const isDepartmentAddedAlertVisible = ref(false)
+const isDepartmentDeletedAlertVisible = ref(false)
+const departmentToDelete = ref<{ id: number; name: string } | null>(null)
 const hasLoadedDepartmentTable = useState<boolean>('has-loaded-department-table', () => false)
 const isTableLoading = ref(!hasLoadedDepartmentTable.value)
 let loadingTimer: ReturnType<typeof setTimeout> | null = null
+let addDepartmentTimer: ReturnType<typeof setTimeout> | null = null
+let successAlertTimer: ReturnType<typeof setTimeout> | null = null
+let deleteDepartmentTimer: ReturnType<typeof setTimeout> | null = null
+let deleteSuccessAlertTimer: ReturnType<typeof setTimeout> | null = null
 
-const departments = [
-    { id: 1, name: 'Human Resources', head: 'Jayneth Valle', totalEmployees: 12 },
-    { id: 2, name: 'Information Technology', head: 'Joel Kent Lascuna', totalEmployees: 24 },
-    { id: 3, name: 'Finance', head: 'Walter Maturan', totalEmployees: 9 },
-    { id: 4, name: 'Operations', head: 'Je-ann Callo', totalEmployees: 15 },
-]
+const departments = ref([
+    { id: 1, name: 'Human Resources', head: 'Jayneth Valle'},
+    { id: 2, name: 'Information Technology', head: 'Joel Kent Lascuna'},
+    { id: 3, name: 'Finance', head: 'Walter Maturan'},
+    { id: 4, name: 'Operations', head: 'Je-ann Callo'},
+])
 
-function handleViewDepartment(departmentId: number) {
-    emit('viewDepartment', departmentId)
+function handleViewDepartment(department: { id: number; name: string; head: string }) {
+    selectedDepartment.value = department
+    emit('viewDepartment', department)
 }
 
-function handleDeleteDepartment(departmentId: number) {
-    console.log('Delete department:', departmentId)
+function handleDeleteDepartment(department: { id: number; name: string }) {
+    departmentToDelete.value = {
+        id: department.id,
+        name: department.name,
+    }
+    isDeleteDepartmentModalOpen.value = true
+}
+
+function closeDeleteDepartmentModal() {
+    isDeleteDepartmentModalOpen.value = false
+    departmentToDelete.value = null
+}
+
+function deleteDepartment() {
+    if (!departmentToDelete.value) {
+        return
+    }
+
+    const targetDepartmentId = departmentToDelete.value.id
+
+    isDeleteDepartmentModalOpen.value = false
+    isDeleteDepartmentLoadingModalOpen.value = true
+
+    deleteDepartmentTimer = setTimeout(() => {
+        departments.value = departments.value.filter((department) => department.id !== targetDepartmentId)
+
+        if (selectedDepartment.value?.id === targetDepartmentId) {
+            selectedDepartment.value = null
+        }
+
+        isDeleteDepartmentLoadingModalOpen.value = false
+        departmentToDelete.value = null
+        isDepartmentDeletedAlertVisible.value = true
+
+        if (deleteSuccessAlertTimer) {
+            clearTimeout(deleteSuccessAlertTimer)
+        }
+
+        deleteSuccessAlertTimer = setTimeout(() => {
+            isDepartmentDeletedAlertVisible.value = false
+        }, 2600)
+    }, 1200)
 }
 
 function handleAddDepartment() {
-    console.log('Add department')
+    newDepartmentName.value = ''
+    hasDepartmentNameError.value = false
+    isAddDepartmentModalOpen.value = true
+}
+
+function closeAddDepartmentModal() {
+    isAddDepartmentModalOpen.value = false
+}
+
+function requestAddDepartmentConfirmation() {
+    if (!newDepartmentName.value.trim()) {
+        hasDepartmentNameError.value = true
+        return
+    }
+
+    hasDepartmentNameError.value = false
+    isConfirmAddDepartmentModalOpen.value = true
+}
+
+function closeAddDepartmentConfirmationModal() {
+    isConfirmAddDepartmentModalOpen.value = false
+}
+
+function addDepartment() {
+    const normalizedName = newDepartmentName.value.trim()
+
+    if (!normalizedName) {
+        return
+    }
+
+    const isDepartmentAlreadyRegistered = departments.value.some(
+        (department) => department.name.toLowerCase() === normalizedName.toLowerCase(),
+    )
+
+    if (isDepartmentAlreadyRegistered) {
+        closeAddDepartmentConfirmationModal()
+        isDuplicateDepartmentAlertVisible.value = true
+        return
+    }
+
+    isDuplicateDepartmentAlertVisible.value = false
+    closeAddDepartmentConfirmationModal()
+    isAddDepartmentLoadingModalOpen.value = true
+
+    const highestDepartmentId = departments.value.reduce((highestId, department) => {
+        return department.id > highestId ? department.id : highestId
+    }, 0)
+
+    addDepartmentTimer = setTimeout(() => {
+        departments.value.push({
+            id: highestDepartmentId + 1,
+            name: normalizedName,
+            head: 'Unassigned',
+        })
+
+        isAddDepartmentLoadingModalOpen.value = false
+        isDepartmentAddedAlertVisible.value = true
+        closeAddDepartmentModal()
+
+        if (successAlertTimer) {
+            clearTimeout(successAlertTimer)
+        }
+
+        successAlertTimer = setTimeout(() => {
+            isDepartmentAddedAlertVisible.value = false
+        }, 2600)
+    }, 1200)
 }
 
 function onSearch() {
@@ -40,15 +170,20 @@ function onSearch() {
     appliedDepartmentFilter.value = departmentFilter.value
 }
 
+function clearDepartmentFilter() {
+    departmentFilter.value = ''
+    appliedDepartmentFilter.value = ''
+}
+
 const departmentOptions = computed(() => {
-    return [...new Set(departments.map((department) => department.name))]
+    return [...new Set(departments.value.map((department) => department.name))]
 })
 
 const filteredDepartments = computed(() => {
     const query = appliedSearchQuery.value.trim().toLowerCase()
     const selectedDepartment = appliedDepartmentFilter.value
 
-    return departments.filter((department) => {
+    return departments.value.filter((department) => {
         const matchesDepartment = !selectedDepartment || department.name === selectedDepartment
         const matchesSearch =
             !query ||
@@ -59,6 +194,20 @@ const filteredDepartments = computed(() => {
             matchesDepartment && matchesSearch
         )
     })
+})
+
+watch(newDepartmentName, (value) => {
+    if (value.trim()) {
+        hasDepartmentNameError.value = false
+    }
+})
+
+watch(searchQuery, (value) => {
+    appliedSearchQuery.value = value
+})
+
+watch(departmentFilter, (value) => {
+    appliedDepartmentFilter.value = value
 })
 
 onMounted(() => {
@@ -77,11 +226,50 @@ onUnmounted(() => {
     if (loadingTimer) {
         clearTimeout(loadingTimer)
     }
+
+    if (addDepartmentTimer) {
+        clearTimeout(addDepartmentTimer)
+    }
+
+    if (deleteDepartmentTimer) {
+        clearTimeout(deleteDepartmentTimer)
+    }
+
+    if (successAlertTimer) {
+        clearTimeout(successAlertTimer)
+    }
+
+    if (deleteSuccessAlertTimer) {
+        clearTimeout(deleteSuccessAlertTimer)
+    }
 })
 </script>
 
 <template>
     <div class="department-page">
+        <div class="top-alert-wrap">
+            <Alert
+                v-model:visible="isDuplicateDepartmentAlertVisible"
+                variant="error"
+                title="Department already registered"
+                message="Please enter a different department name."
+            />
+
+            <Alert
+                v-model:visible="isDepartmentAddedAlertVisible"
+                variant="success"
+                title="Successfully added"
+                message="New department has been added."
+            />
+
+            <Alert
+                v-model:visible="isDepartmentDeletedAlertVisible"
+                variant="success"
+                title="Successfully deleted"
+                message="Department has been deleted."
+            />
+        </div>
+
         <h1 class="department-title">Department Management</h1>
 
         <form class="department-search" @submit.prevent="onSearch">
@@ -104,25 +292,34 @@ onUnmounted(() => {
                 <span>Search</span>
             </Button>
 
-            <div class="filter-dropdown">
-                <FunnelIcon class="filter-icon" />
-                <select v-model="departmentFilter" class="filter-select" aria-label="Filter department">
-                    <option value="">All Departments</option>
-                    <option v-for="option in departmentOptions" :key="option" :value="option">
-                        {{ option }}
-                    </option>
-                </select>
-                <span class="filter-caret" aria-hidden="true"></span>
+            <div class="department-filter-control">
+                <div class="filter-dropdown">
+                    <select v-model="departmentFilter" class="filter-select" aria-label="Filter department">
+                        <option value="">All Departments</option>
+                        <option v-for="option in departmentOptions" :key="option" :value="option">
+                            {{ option }}
+                        </option>
+                    </select>
+                </div>
+
+                <button
+                    v-if="departmentFilter"
+                    type="button"
+                    class="clear-filter-button"
+                    @click="clearDepartmentFilter"
+                >
+                    Clear
+                </button>
             </div>
 
             <Button
                 variant="solid"
                 type="button"
                 class="add-button"
+                aria-label="Add Department"
                 @click="handleAddDepartment"
             >
                 <PlusIcon class="add-icon" />
-                <span>Add Department</span>
             </Button>
         </form>
 
@@ -134,7 +331,6 @@ onUnmounted(() => {
                     <tr>
                         <th>Department</th>
                         <th>Department Head</th>
-                        <th>Total Employees</th>
                         <th class="actions-column">Actions</th>
                     </tr>
                 </thead>
@@ -151,14 +347,13 @@ onUnmounted(() => {
                     <tr v-for="department in isTableLoading ? [] : filteredDepartments" :key="department.id">
                         <td>{{ department.name }}</td>
                         <td>{{ department.head }}</td>
-                        <td>{{ department.totalEmployees }}</td>
                         <td>
                             <div class="action-buttons">
                                 <button
                                     type="button"
                                     class="action-button action-button--view"
                                     :aria-label="`View ${department.name}`"
-                                    @click="handleViewDepartment(department.id)"
+                                    @click="handleViewDepartment(department)"
                                 >
                                     <EyeIcon class="action-icon" />
                                 </button>
@@ -167,7 +362,7 @@ onUnmounted(() => {
                                     type="button"
                                     class="action-button action-button--delete"
                                     :aria-label="`Delete ${department.name}`"
-                                    @click="handleDeleteDepartment(department.id)"
+                                    @click="handleDeleteDepartment(department)"
                                 >
                                     <TrashIcon class="action-icon" />
                                 </button>
@@ -180,12 +375,161 @@ onUnmounted(() => {
                 </tbody>
             </table>
         </div>
+
+        <Modal
+            v-model:open="isAddDepartmentModalOpen"
+            hide-trigger
+            :dismissible="false"
+            title="New Department"
+        >
+            <template #header>
+                <div class="modal-header-wrap">
+                    <h3 class="modal-title">New Department</h3>
+                    <!-- <button
+                        type="button"
+                        class="modal-close-button"
+                        aria-label="Close add department modal"
+                        @click="closeAddDepartmentModal"
+                    >
+                        <XMarkIcon class="update-modal-close-icon" />
+                    </button> -->
+                </div>
+            </template>
+
+            <div class="modal-form-field">
+                <label class="modal-field-label" for="new-department-name">Enter Department name</label>
+                <Input
+                    id="new-department-name"
+                    v-model="newDepartmentName"
+                    placeholder="Department name"
+                    :aria-invalid="hasDepartmentNameError ? 'true' : 'false'"
+                    :style="hasDepartmentNameError ? { borderColor: '#ef4444', boxShadow: '0 0 0 3px rgba(239, 68, 68, 0.14)' } : undefined"
+                />
+                <p v-if="hasDepartmentNameError" class="modal-field-error">Please enter department name</p>
+            </div>
+
+            <template #footer>
+                <button
+                    type="button"
+                    class="app-modal__btn app-modal__btn--ghost"
+                    @click="closeAddDepartmentModal"
+                >
+                    Cancel
+                </button>
+                <button
+                    type="button"
+                    class="app-modal__btn app-modal__btn--primary"
+                    @click="requestAddDepartmentConfirmation"
+                >
+                    Add Department
+                </button>
+            </template>
+        </Modal>
+
+        <Modal
+            v-model:open="isConfirmAddDepartmentModalOpen"
+            hide-trigger
+            :dismissible="false"
+            title="Confirm Department"
+        >
+            <p class="confirm-modal-text">
+                Add
+                <span class="confirm-modal-department-name">{{ newDepartmentName.trim() }}</span>
+                to the list?
+            </p>
+
+            <template #footer>
+                <button
+                    type="button"
+                    class="app-modal__btn app-modal__btn--ghost confirm-modal-cancel-btn"
+                    @click="closeAddDepartmentConfirmationModal"
+                >
+                    Cancel
+                </button>
+                <button
+                    type="button"
+                    class="app-modal__btn app-modal__btn--primary confirm-modal-confirm-btn"
+                    @click="addDepartment"
+                >
+                    Confirm
+                </button>
+            </template>
+        </Modal>
+
+        <Modal
+            v-model:open="isAddDepartmentLoadingModalOpen"
+            hide-trigger
+            :dismissible="false"
+            :show-footer="false"
+            title=""
+        >
+            <div class="loading-modal-content" role="status" aria-live="polite">
+                <span class="table-spinner" aria-hidden="true"></span>
+                <p class="adding-department-text">Adding new department</p>
+            </div>
+        </Modal>
+
+        <Modal
+            v-model:open="isDeleteDepartmentModalOpen"
+            hide-trigger
+            :dismissible="false"
+            title="Delete Department"
+        >
+            <p class="delete-modal-text">
+                Are you sure you want to delete Department of
+                <span class="confirm-modal-department-name">{{ departmentToDelete?.name || 'this department' }}</span
+                >?
+            </p>
+
+            <template #footer>
+                <div class="delete-modal-footer-content">
+                    <button
+                        type="button"
+                        class="app-modal__btn delete-modal-no-btn"
+                        @click="closeDeleteDepartmentModal"
+                    >
+                        No
+                    </button>
+                    <button
+                        type="button"
+                        class="app-modal__btn delete-modal-yes-btn"
+                        @click="deleteDepartment"
+                    >
+                        Yes, Delete
+                    </button>
+                </div>
+            </template>
+        </Modal>
+
+        <Modal
+            v-model:open="isDeleteDepartmentLoadingModalOpen"
+            hide-trigger
+            :dismissible="false"
+            :show-footer="false"
+            title=""
+        >
+            <div class="loading-modal-content" role="status" aria-live="polite">
+                <span class="table-spinner" aria-hidden="true"></span>
+                <p class="deleting-department-text">Deleting Department</p>
+            </div>
+        </Modal>
     </div>
 </template>
 
 <style scoped>
 .department-page {
     width: 100%;
+    padding-bottom: 5.5rem;
+}
+
+.top-alert-wrap {
+    position: fixed;
+    top: 18px;
+    right: 18px;
+    width: min(360px, calc(100vw - 32px));
+    z-index: 1100;
+    display: grid;
+    gap: 10px;
 }
 
 .department-title {
@@ -195,7 +539,7 @@ onUnmounted(() => {
 
 .department-search {
     display: grid;
-    grid-template-columns: minmax(240px, 360px) auto 190px 1fr auto;
+    grid-template-columns: minmax(240px, 360px) auto auto 1fr auto;
     align-items: center;
     gap: 0.75rem;
     margin-bottom: 1rem;
@@ -222,39 +566,41 @@ onUnmounted(() => {
 }
 
 .add-button {
-    grid-column: 5;
-    justify-self: end;
+    position: fixed;
+    right: 24px;
+    bottom: 24px;
+    z-index: 30;
     margin-inline: 0;
-    width: 144px;
-    min-height: 36px;
-    padding: 8px 10px;
-    font-size: 0.8rem;
-    white-space: nowrap;
+    width: 56px;
+    min-height: 56px;
+    height: 56px;
+    padding: 0;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 12px 24px rgba(15, 23, 42, 0.2);
 }
 
 .add-icon {
-    width: 14px;
-    height: 14px;
+    width: 20px;
+    height: 20px;
     flex-shrink: 0;
     color: currentColor;
 }
 
 .filter-dropdown {
     position: relative;
-    width: 100%;
+    width: 190px;
     min-width: 180px;
     max-width: 240px;
 }
 
-.filter-icon {
-    position: absolute;
-    left: 10px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 14px;
-    height: 14px;
-    color: #6b7280;
-    pointer-events: none;
+.department-filter-control {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: nowrap;
 }
 
 .filter-select {
@@ -262,30 +608,41 @@ onUnmounted(() => {
     min-height: 36px;
     border-radius: 10px;
     border: 1px solid #d1d5db;
-    background: #ffffff;
+    background-color: #ffffff;
     color: #111827;
     font-size: 0.875rem;
-    padding: 8px 30px 8px 32px;
+    padding: 8px 12px;
     appearance: none;
     outline: none;
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236B7280' d='M2.5 4.5l3.5 3 3.5-3'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 2rem;
 }
 
 .filter-select:focus {
-    border-color: #6366f1;
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+    border-color: #635bff;
+    box-shadow: 0 0 0 3px rgba(99, 91, 255, 0.2);
 }
 
-.filter-caret {
-    position: absolute;
-    right: 10px;
-    top: 50%;
-    transform: translateY(-50%) rotate(45deg);
-    width: 8px;
-    height: 8px;
-    border-right: 2px solid #6b7280;
-    border-bottom: 2px solid #6b7280;
-    pointer-events: none;
+.clear-filter-button {
+    min-height: 32px;
+    width: auto;
+    padding: 7px 10px;
+    border: 1px solid #d1d5db;
+    border-radius: 10px;
+    background: #ffffff;
+    color: #334155;
+    font-size: 0.8rem;
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.clear-filter-button:hover {
+    background: #f8fafc;
+    border-color: #94a3b8;
 }
 
 .departments-table-wrap {
@@ -410,20 +767,196 @@ onUnmounted(() => {
     color: #64748b;
 }
 
+.modal-header-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.modal-title {
+    margin: 0;
+    color: #111827;
+    font-size: 1rem;
+    line-height: 1.2;
+}
+
+.modal-close-button {
+    width: 30px;
+    height: 30px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #334155;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-close-button:hover {
+    background: #f8fafc;
+}
+
+.modal-form-field {
+    display: grid;
+    gap: 8px;
+}
+
+.confirm-modal-text {
+    margin: 0;
+    color: #475569;
+    font-size: 0.92rem;
+}
+
+.delete-modal-text {
+    margin: 0;
+    color: #475569;
+    font-size: 0.92rem;
+}
+
+.confirm-modal-department-name {
+    font-weight: 600;
+    color: #334155;
+}
+
+.loading-modal-content {
+    min-height: 120px;
+    display: grid;
+    justify-items: center;
+    align-content: center;
+    gap: 12px;
+}
+
+.adding-department-text {
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: 200;
+    color: #334155;
+}
+
+.deleting-department-text {
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: 200;
+    color: #334155;
+}
+
+.modal-field-label {
+    font-size: 0.875rem;
+    color: #334155;
+    font-weight: 600;
+}
+
+.modal-field-error {
+    margin: 0;
+    color: #dc2626;
+    font-size: 0.8rem;
+    line-height: 1.25;
+}
+
+.app-modal__btn {
+    border: 1px solid transparent;
+    border-radius: 10px;
+    padding: 8px 12px;
+    cursor: pointer;
+}
+
+.app-modal__btn--ghost {
+    border-color: #fecaca;
+    background: #fef2f2;
+    color: #b91c1c;
+}
+
+.app-modal__btn--ghost:hover {
+    background: #fee2e2;
+}
+
+.app-modal__btn--primary {
+    border-color: #bfdbfe;
+    background: #eff6ff;
+    color: #1d4ed8;
+}
+
+.app-modal__btn--primary:hover {
+    background: #dbeafe;
+}
+
+.app-modal__btn--ghost.confirm-modal-cancel-btn {
+    border-color: #fecaca;
+    background: #fef2f2;
+    color: #b91c1c;
+}
+
+.app-modal__btn--ghost.confirm-modal-cancel-btn:hover {
+    background: #fee2e2;
+}
+
+.app-modal__btn--primary.confirm-modal-confirm-btn {
+    border-color: #bfdbfe;
+    background: #eff6ff;
+    color: #1d4ed8;
+}
+
+.app-modal__btn--primary.confirm-modal-confirm-btn:hover {
+    background: #dbeafe;
+}
+
+.delete-modal-no-btn {
+    border-color: #bfdbfe;
+    background: #eff6ff;
+    color: #1d4ed8;
+}
+
+.delete-modal-no-btn:hover {
+    background: #dbeafe;
+}
+
+.delete-modal-yes-btn {
+    border-color: #fecaca;
+    background: #fef2f2;
+    color: #b91c1c;
+}
+
+.delete-modal-yes-btn:hover {
+    background: #fee2e2;
+}
+
+.delete-modal-footer-content {
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    gap: 8px !important;
+    width: auto !important;
+}
+
+:deep(.app-modal__footer) {
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    gap: 8px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+:deep(.app-modal__footer > *) {
+    margin: 0 !important;
+}
+
 .search-icon {
     width: 16px;
     height: 16px;
 }
 
+.update-modal-close-icon {
+  width: 14px;
+  height: 14px;
+}
+
 @media (max-width: 900px) {
     .department-search {
-        grid-template-columns: 1fr auto 1fr;
+        grid-template-columns: 1fr auto auto;
         align-items: end;
-    }
-
-    .add-button {
-        grid-column: 1 / -1;
-        justify-self: start;
     }
 
     .filter-dropdown {
@@ -432,6 +965,12 @@ onUnmounted(() => {
 }
 
 @media (max-width: 640px) {
+    .top-alert-wrap {
+        top: 12px;
+        right: 12px;
+        width: calc(100vw - 24px);
+    }
+
     .department-page {
         padding-inline: 0;
     }
@@ -448,9 +987,15 @@ onUnmounted(() => {
 
     .search-button,
     .add-button,
-    .filter-dropdown {
+    .department-filter-control {
         width: 100%;
         max-width: none;
+    }
+
+    .filter-dropdown {
+        flex: 1 1 auto;
+        min-width: 0;
+        width: auto;
     }
 
     .search-button,
@@ -461,8 +1006,18 @@ onUnmounted(() => {
     }
 
     .add-button {
-        grid-column: auto;
-        justify-self: stretch;
+        width: 52px;
+        height: 52px;
+        min-height: 52px;
+        right: 16px;
+        bottom: 16px;
+        border-radius: 999px;
+        padding: 0;
+    }
+
+    .add-icon {
+        width: 18px;
+        height: 18px;
     }
 
     .departments-table {
