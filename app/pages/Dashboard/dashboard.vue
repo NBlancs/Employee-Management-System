@@ -3,42 +3,49 @@ import { onMounted, onUnmounted, ref } from 'vue'
 import OverviewCard from '~/components/OverviewCard.vue'
 import { UserGroupIcon, ShieldCheckIcon, CheckCircleIcon, XCircleIcon, ChartBarSquareIcon } from '@heroicons/vue/24/outline'
 
+// API Response Types
+interface DashboardStats {
+  totalEmployees: number
+  totalPresent: number
+  totalAbsent: number
+  totalDepartments: number
+}
+
+interface RecentAttendance {
+  fullName: string
+  status: string
+  timeIn: string
+}
+
+interface RecentTransaction {
+  reference: string
+  type: string
+  firstName: string
+  dateTime: string
+}
+
+interface ApiResponse<T> {
+  success: boolean
+  data: T
+}
+
 const hasLoadedDashboardTable = useState<boolean>('has-loaded-dashboard-table', () => false)
 const isTableLoading = ref(!hasLoadedDashboardTable.value)
 let loadingTimer: ReturnType<typeof setTimeout> | null = null
 
-const recentAttendances = [
-  {
-    fullName: 'Lascuña, Joel Kent',
-    status: 'Present',
-    time: '08:02 AM'
-  },
-  {
-    fullName: 'Valle, Jayneth',
-    status: 'Late',
-    time: '08:21 AM'
-  },
-  {
-    fullName: 'Maturan, Walter',
-    status: 'Present',
-    time: '07:56 AM'
-  },
-  {
-    fullName: 'Callo, Je-ann',
-    status: 'Present',
-    time: '08:06 AM'
-  },
-  
-]
+// Dashboard stats
+const dashboardStats = ref<DashboardStats>({
+  totalEmployees: 0,
+  totalPresent: 0,
+  totalAbsent: 0,
+  totalDepartments: 0,
+})
+const isStatsLoading = ref(true)
 
-const recentTransactions = [
-  {
-    reference: '240005',
-    type: 'Employee Update',
-    by: 'HR',
-    dateTime: 'Apr 12, 2026 11:08 AM'
-  }
-]
+const recentAttendances = ref<RecentAttendance[]>([])
+
+const recentTransactions = ref<RecentTransaction[]>([])
+
 
 const currentDate = new Date().toLocaleDateString(undefined, {
   weekday: 'short',
@@ -54,7 +61,39 @@ function getStatusClass(status: string) {
   return 'status-badge--neutral'
 }
 
-onMounted(() => {
+onMounted(async () => {
+  // Fetch dashboard stats
+  try {
+    const response = await $fetch<ApiResponse<DashboardStats>>('/api/dashboard/stats')
+    if (response?.data) {
+      dashboardStats.value = response.data
+    }
+  } catch (error) {
+    console.error('Failed to fetch dashboard stats:', error)
+  } finally {
+    isStatsLoading.value = false
+  }
+
+  // Fetch recent attendances
+  try {
+    const response = await $fetch<ApiResponse<RecentAttendance[]>>('/api/dashboard/recent-attendances')
+    if (response?.data) {
+      recentAttendances.value = response.data
+    }
+  } catch (error) {
+    console.error('Failed to fetch recent attendances:', error)
+  }
+
+  // Fetch recent transactions
+  try {
+    const response = await $fetch<ApiResponse<RecentTransaction[]>>('/api/dashboard/recent-transactions')
+    if (response?.data) {
+      recentTransactions.value = response.data
+    }
+  } catch (error) {
+    console.error('Failed to fetch recent transactions:', error)
+  }
+
   if (hasLoadedDashboardTable.value) {
     isTableLoading.value = false
     return
@@ -81,7 +120,7 @@ onUnmounted(() => {
       <OverviewCard 
         :icon="UserGroupIcon"
         label="Total Employees" 
-        value="125"
+        :value="dashboardStats.totalEmployees.toString()"
         bgColor="#e9f2ff"
         iconBgColor="#d0e5ff"
         iconColor="#3686ff"
@@ -89,7 +128,7 @@ onUnmounted(() => {
       <OverviewCard 
         :icon="CheckCircleIcon"
         label="Total Present" 
-        value="95"
+        :value="dashboardStats.totalPresent.toString()"
         bgColor="#e5f8f0"
         iconBgColor="#cef2e5"
         iconColor="#00c16a"
@@ -97,7 +136,7 @@ onUnmounted(() => {
       <OverviewCard 
           :icon="XCircleIcon"
           label="Total Absent" 
-          value="30"
+          :value="dashboardStats.totalAbsent.toString()"
           bgColor="#fee9ea"
           iconBgColor="#fdcfd3"
           iconColor="#fc4f57"
@@ -106,7 +145,7 @@ onUnmounted(() => {
       <OverviewCard 
         :icon="ShieldCheckIcon"
         label="Departments" 
-        value="5"
+        :value="dashboardStats.totalDepartments.toString()"
         bgColor="#fef8e6"
         iconBgColor="#fef0cd"
         iconColor="#f0b305"
@@ -137,14 +176,14 @@ onUnmounted(() => {
             </td>
           </tr>
 
-          <tr v-for="attendance in isTableLoading ? [] : recentAttendances.slice(0, 5)" :key="`${attendance.fullName}-${attendance.time}`">
+          <tr v-for="attendance in isTableLoading ? [] : recentAttendances.slice(0, 5)" :key="`${attendance.fullName}-${attendance.timeIn}`">
             <td>{{ attendance.fullName }}</td>
             <td class="status-cell-center">
               <span class="status-badge" :class="getStatusClass(attendance.status)">
                 {{ attendance.status }}
               </span>
             </td>
-            <td>{{ attendance.time }}</td>
+            <td>{{ attendance.timeIn }}</td>
           </tr>
         </tbody>
       </table>
@@ -177,7 +216,7 @@ onUnmounted(() => {
           <tr v-for="transaction in isTableLoading ? [] : recentTransactions.slice(0, 5)" :key="transaction.reference">
             <td>{{ transaction.reference }}</td>
             <td>{{ transaction.type }}</td>
-            <td>{{ transaction.by }}</td>
+            <td>{{ transaction.firstName }}</td>
             <td>{{ transaction.dateTime }}</td>
           </tr>
         </tbody>

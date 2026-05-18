@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { MagnifyingGlassIcon, XMarkIcon } from '@heroicons/vue/24/outline'
 import IconInput from '~/components/IconInput.vue'
 import Button from '~/components/Button.vue'
@@ -10,12 +10,16 @@ interface TransactionRow {
     processedBy: string
     classification: string
     referenceNo: string
+    referenceType: string
+    referenceId: number
     date: string
     dateValue: string
 }
 
 const searchQuery = ref('')
 const selectedDate = ref('')
+const transactionRows = ref<TransactionRow[]>([])
+const isLoading = ref(false)
 
 const transactionColumns = [
     { accessorKey: 'transactionNo', header: 'Transaction No.' },
@@ -24,49 +28,6 @@ const transactionColumns = [
     { accessorKey: 'referenceNo', header: 'Reference No.' },
     { accessorKey: 'date', header: 'Date' },
 ]
-
-const transactionRows = ref<TransactionRow[]>([
-    {
-        transactionNo: 'TRX-0001',
-        processedBy: 'Valle, Jayneth',
-        classification: 'Employee Update',
-        referenceNo: 'REF-240005',
-        date: 'Apr 12, 2026',
-        dateValue: '2026-04-12',
-    },
-    {
-        transactionNo: 'TRX-0002',
-        processedBy: 'Valle, Jayneth',
-        classification: 'Salary Adjustment',
-        referenceNo: 'REF-240006',
-        date: 'Apr 13, 2026',
-        dateValue: '2026-04-13',
-    },
-    {
-        transactionNo: 'TRX-0003',
-        processedBy: 'Valle, Jayneth',
-        classification: 'Access Update',
-        referenceNo: 'REF-240007',
-        date: 'Apr 14, 2026',
-        dateValue: '2026-04-14',
-    },
-    {
-        transactionNo: 'TRX-0004',
-        processedBy: 'Valle, Jayneth',
-        classification: 'Department Transfer',
-        referenceNo: 'REF-240008',
-        date: 'Apr 15, 2026',
-        dateValue: '2026-04-15',
-    },
-    {
-        transactionNo: 'TRX-0005',
-        processedBy: 'Valle, Jayneth',
-        classification: 'Record Verification',
-        referenceNo: 'REF-240009',
-        date: 'Apr 16, 2026',
-        dateValue: '2026-04-16',
-    },
-])
 
 const filteredTransactionRows = computed(() => {
     const query = searchQuery.value.trim().toLowerCase()
@@ -81,6 +42,24 @@ const filteredTransactionRows = computed(() => {
     })
 })
 
+async function loadTransactions() {
+    try {
+        isLoading.value = true
+        const response = await $fetch<{ success: boolean; data: TransactionRow[] }>('/api/transactions')
+        const data = response?.data || []
+
+        if (Array.isArray(data)) {
+            transactionRows.value = data
+        }
+    } catch (error) {
+        console.error('Failed to load transactions:', error)
+        // Fallback to empty array
+        transactionRows.value = []
+    } finally {
+        isLoading.value = false
+    }
+}
+
 function handleSearch() {
     return
 }
@@ -88,6 +67,10 @@ function handleSearch() {
 function clearSelectedDate() {
     selectedDate.value = ''
 }
+
+onMounted(() => {
+    loadTransactions()
+})
 </script>
 
 <template>
@@ -309,6 +292,7 @@ function clearSelectedDate() {
     .transaction-search {
         grid-template-columns: 1fr;
         gap: 0.5rem;
+        width: 220px;
     }
 
     .search-button {

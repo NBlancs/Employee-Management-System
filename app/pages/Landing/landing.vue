@@ -3,18 +3,16 @@ import { ref } from 'vue'
 import employeeLogo from '~/assets/svg/employee-logo.svg'
 import { UsersIcon, ClockIcon, CalendarDaysIcon, CreditCardIcon } from '@heroicons/vue/24/outline'
 
-const EXPECTED_USERNAME = 'admin'
-const EXPECTED_PASSWORD = '123'
-
 const username = ref('')
 const password = ref('')
 const usernameError = ref('')
 const passwordError = ref('')
-const isLoginModalOpen = ref(false)
-const isCheckingLogin = ref(false)
 const loginStatusText = ref('')
-const isLoginSuccess = ref(false)
+const isSigningIn = ref(false)
+const loginButtonText = ref('Sign In')
 const authCookie = useCookie<string | null>('ems_auth')
+const userCookie = useCookie<string | null>('ems_user')
+const config = useRuntimeConfig()
 
 async function onSubmit() {
   usernameError.value = ''
@@ -32,31 +30,53 @@ async function onSubmit() {
     return
   }
 
-  isLoginModalOpen.value = true
-  isCheckingLogin.value = true
-  isLoginSuccess.value = false
-  loginStatusText.value = 'Signing in...'
+  // start button state
+  loginStatusText.value = ''
+  isSigningIn.value = true
+  loginButtonText.value = 'Signing In'
 
-  await new Promise((resolve) => setTimeout(resolve, 1200))
-
-  isCheckingLogin.value = false
-
-  const isMatch = username.value === EXPECTED_USERNAME && password.value === EXPECTED_PASSWORD
-
-  if (isMatch) {
-    isLoginSuccess.value = true
-    loginStatusText.value = 'Login successful. Redirecting to dashboard...'
-    authCookie.value = 'true'
-
-    await new Promise((resolve) => setTimeout(resolve, 900))
-    await navigateTo({
-      path: '/main?login=success&tab=dashboard',
-      query: { login: 'success' },
+  try {
+    const response = await $fetch<{ success: boolean; data: {
+      employeeId: number
+      accountId: number
+      username: string
+      firstName: string
+      middleName: string
+      lastName: string
+        suffix: string
+      displayName: string
+      role: string
+      department: string
+    } }>(`${config.public.apiBaseUrl}/api/auth/login`, {
+      method: 'POST',
+      body: {
+        username: username.value,
+        password: password.value,
+      },
     })
-    return
-  }
 
-  loginStatusText.value = 'Invalid username or password. Please try again.'
+    authCookie.value = 'true'
+    userCookie.value = JSON.stringify({
+      employeeId: response.data.employeeId,
+      accountId: response.data.accountId,
+      username: response.data.username,
+      firstName: response.data.firstName,
+      middleName: response.data.middleName,
+      lastName: response.data.lastName,
+        suffix: response.data.suffix,
+      displayName: response.data.displayName,
+      role: response.data.role,
+      department: response.data.department,
+    })
+
+    await navigateTo('/main?login=success&tab=overview')
+  } catch (error: any) {
+    authCookie.value = null
+    userCookie.value = null
+    loginStatusText.value = error?.data?.message || 'Invalid username or password. Please try again.'
+    isSigningIn.value = false
+    loginButtonText.value = 'Sign In'
+  }
 }
 
 definePageMeta({
@@ -128,13 +148,14 @@ definePageMeta({
             <img :src="employeeLogo" alt="Employee logo" class="welcome-logo" />
           </template>
 
-          <form class="login-form" @submit.prevent="onSubmit">
+          <form class="login-form" method="post" @submit.prevent="onSubmit">
             <IconInput
               id="username"
               v-model="username"
               label="Username"
               name="username"
               placeholder="Enter your username"
+              autocomplete="username"
               :error="usernameError"
               required
             >
@@ -153,6 +174,7 @@ definePageMeta({
               name="password"
               type="password"
               placeholder="Enter your password"
+              autocomplete="current-password"
               :error="passwordError"
               required
             >
@@ -164,9 +186,29 @@ definePageMeta({
               </template>
             </IconInput>
 
-            <Button id="login-button" type="submit" variant="solid" custom-color="#635bff" block>
-              Sign In
+            <Button
+              id="login-button"
+              type="button"
+              :disabled="isSigningIn"
+              @click="onSubmit"
+              variant="solid"
+              custom-color="#635bff"
+              block
+            >
+              <div class="button-content">
+                <template v-if="isSigningIn">
+                  <span class="button-spinner-centered" aria-hidden="true">
+                    <span class="spinner"></span>
+                    <span class="spinner-text">Signing in</span>
+                  </span>
+                </template>
+                <template v-else>
+                  <span class="button-label">{{ loginButtonText }}</span>
+                </template>
+              </div>
             </Button>
+
+            <p class="login-status-text" v-if="loginStatusText">{{ loginStatusText }}</p>
 
             <h1 class="forgot-password">
               Forgot password?
@@ -176,24 +218,7 @@ definePageMeta({
       </div>
     </div>
 
-    <Modal v-model:open="isLoginModalOpen" title="" description="" :dismissible="!isCheckingLogin" hide-trigger>
-      <div class="login-loading-modal">
-        <div v-if="isCheckingLogin" class="loading-spinner" aria-hidden="true"></div>
-        <p :class="['login-status-text', { 'login-status-text--success': isLoginSuccess, 'login-status-text--error': !isCheckingLogin && !isLoginSuccess }]">
-          {{ loginStatusText }}
-        </p>
-
-        <Button
-          v-if="!isCheckingLogin && !isLoginSuccess"
-          type="button"
-          variant="soft"
-          custom-color="#635bff"
-          @click="isLoginModalOpen = false"
-        >
-          Close
-        </Button>
-      </div>
-    </Modal>
+    <!-- Modal removed: using button state and inline status text instead -->
   </div>
 </template>
 
@@ -369,5 +394,59 @@ definePageMeta({
   align-items: center;
   justify-content: center;
   background-color: #fff;
+}
+
+.button-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.button-label {
+  flex: 1;
+  text-align: center;
+}
+
+.button-spinner {
+  display: flex;
+  align-items: center;
+  margin-left: 8px;
+}
+
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255,255,255,0.35);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+}
+
+.spinner-text {
+  margin-left: 8px;
+  color: #ffffff;
+  font-size: 0.95rem;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.button-spinner-centered {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.login-status-text {
+  margin-top: 0.75rem;
+  color: #e11d48; /* red-600 */
+  font-size: 0.95rem;
+  width: 100%;
+  text-align: center;
 }
 </style>

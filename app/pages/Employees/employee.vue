@@ -8,6 +8,7 @@ import CheckBox from '~/components/CheckBox.vue'
 import Alert from '~/components/Alert.vue'
 import Modal from '~/components/Modal.vue'
 
+
 type EmployeeRow = {
     id: number
     name: string
@@ -29,6 +30,7 @@ const emit = defineEmits<{
 
 const searchQuery = ref('')
 const departmentQuery = ref('')
+const departments = ref<string[]>([])
 const noCardFilter = ref(false)
 const isExactSearchMode = ref(false)
 const hasLoadedEmployeeTable = useState<boolean>('has-loaded-employee-table', () => false)
@@ -37,9 +39,12 @@ const deleteModal = ref(false)
 const deleteLoadingModal = ref(false)
 const employeeIdToDelete = ref<number | null>(null)
 const showDeleteSuccessAlert = ref(false)
+const showErrorAlert = ref(false)
+const errorMessage = ref('')
 let loadingTimer: ReturnType<typeof setTimeout> | null = null
 let deleteTimer: ReturnType<typeof setTimeout> | null = null
 let deleteAlertTimer: ReturnType<typeof setTimeout> | null = null
+let errorAlertTimer: ReturnType<typeof setTimeout> | null = null
 
 const filteredEmployees = computed(() => {
     const query = normalizeSearchValue(searchQuery.value)
@@ -69,7 +74,34 @@ function handleViewEmployee(employeeId: number) {
 }
 
 
+function isAdminUser() {
+    return currentUser.value?.role?.trim().toLowerCase() === 'admin'
+}
+
+function showDeleteError(message: string) {
+    errorMessage.value = message
+    showErrorAlert.value = true
+
+    if (errorAlertTimer) {
+        clearTimeout(errorAlertTimer)
+    }
+
+    errorAlertTimer = setTimeout(() => {
+        showErrorAlert.value = false
+    }, 3000)
+}
+
 function handleDeleteEmployee(employeeId: number) {
+    if (!isAdminUser()) {
+        showDeleteError('You dont have a permission to delete')
+        return
+    }
+
+    if (employeeId === currentUser?.value?.employeeId) {
+        showDeleteError('You cannot delete your own information.')
+        return
+    }
+
     employeeIdToDelete.value = employeeId
     deleteModal.value = true
 }
@@ -100,7 +132,7 @@ function confirmDelete() {
         clearTimeout(deleteTimer)
     }
 
-    deleteTimer = setTimeout(() => {
+    deleteTimer = setTimeout(async () => {
         if (employeeIdToDelete.value === null) {
             deleteLoadingModal.value = false
             return
@@ -109,6 +141,12 @@ function confirmDelete() {
         if (props.employees) {
             emit('deleteEmployee', employeeIdToDelete.value)
         } else {
+            try {
+                await $fetch(`/api/employees/${employeeIdToDelete.value}`, { method: 'DELETE' })
+            } catch (err) {
+                // ignore backend error and continue
+            }
+
             sharedEmployeeRows.value = sharedEmployeeRows.value.filter(employee => employee.id !== employeeIdToDelete.value)
         }
 
@@ -127,25 +165,100 @@ function confirmDelete() {
 }
 
 
-const defaultEmployees: EmployeeRow[] = [
-    { id: 1, name: 'Lascuña, Joel Kent', cardStatus: 'Has Card', department: 'IT', cardNumber: 'IDC-IT-1001' },
-    { id: 2, name: 'Valle, Jayneth', cardStatus: 'Has Card', department: 'HR', cardNumber: 'IDC-HR-1002' },
-    { id: 3, name: 'Maturan, Walter', cardStatus: 'No Card', department: 'Finance', cardNumber: '' },
-    { id: 4, name: 'Callo, Je-ann', cardStatus: 'Has Card', department: 'IT', cardNumber: 'IDC-IT-1004' },
-]
+const sharedEmployeeRows = useState<EmployeeRow[]>('employees-table-rows', () => [])
+const userCookie = useCookie<string | null>('ems_user')
 
-const sharedEmployeeRows = useState<EmployeeRow[]>('employees-table-rows', () => defaultEmployees)
+type LoggedInUser = {
+    employeeId: number
+    accountId: number
+    username: string
+    firstName: string
+    middleName: string
+    lastName: string
+    suffix: string
+    displayName: string
+    role: string
+    department: string
+}
+
+const currentUser = computed<LoggedInUser | null>(() => {
+    if (!userCookie.value) {
+        return null
+    }
+
+    try {
+        return JSON.parse(userCookie.value) as LoggedInUser
+    } catch {
+        return null
+    }
+})
 
 watch(() => props.employees, (employees) => {
     if (!employees || employees.length === 0) {
         return
     }
 
-    sharedEmployeeRows.value = employees
+    sharedEmployeeRows.value = employees.map(normalizeEmployeeRow)
 }, { immediate: true })
 
-const tableEmployees = computed(() => props.employees ?? sharedEmployeeRows.value)
+const tableEmployees = computed(() => {
+    if (props.employees && props.employees.length > 0) {
+        return props.employees.map(normalizeEmployeeRow)
+    }
 
+    return sharedEmployeeRows.value
+})
+
+const departmentSelectWidth = computed(() => {
+    if (!departmentQuery.value) {
+        return '180px'
+    }
+
+    const length = departmentQuery.value.length
+    const width = Math.min(Math.max(length * 10 + 50, 180), 360)
+
+    return `${width}px`
+})
+
+function buildEmployeeDisplayName(employee: {
+    firstName: string
+    middleName?: string
+    lastName: string
+    suffix?: string
+}) {
+    const firstName = employee.firstName.trim().split(/\s+/)[0] || ''
+    const lastName = employee.lastName.trim()
+    const suffix = employee.suffix?.trim() ? ` ${employee.suffix.trim()}` : ''
+    const middleInitial = employee.middleName?.trim()
+        ? `${employee.middleName.trim().charAt(0).toUpperCase()}.`
+        : ''
+
+    return `${lastName}, ${firstName}${suffix}${middleInitial ? `, ${middleInitial}` : ''}`
+}
+
+function normalizeEmployeeRow(raw: any): EmployeeRow {
+    const info = raw.user_informations ?? {}
+    const position = raw.positions ?? {}
+    const departmentData = position.departments ?? {}
+    const card = raw.cards ?? null
+
+    const firstName = raw.firstName ?? info.first_name ?? ''
+    const middleName = raw.middleName ?? info.middle_name ?? ''
+    const lastName = raw.lastName ?? info.last_name ?? ''
+    const suffix = raw.suffix ?? info.suffix ?? ''
+
+    const name = firstName || middleName || lastName
+        ? buildEmployeeDisplayName({ firstName, middleName, lastName, suffix })
+        : String(raw.name ?? '')
+
+    return {
+        id: Number(raw.id ?? raw.employee_id ?? 0),
+        name,
+        department: raw.department ?? departmentData.department_name ?? '',
+        cardStatus: raw.cardStatus ?? (card?.card_number ? 'Has Card' : 'No Card'),
+        cardNumber: raw.cardNumber ?? card?.card_number ?? '',
+    }
+}
 function normalizeSearchValue(value: string) {
     return value
         .toLowerCase()
@@ -185,15 +298,41 @@ watch(searchQuery, () => {
 })
 
 onMounted(() => {
-    if (hasLoadedEmployeeTable.value) {
-        isTableLoading.value = false
-        return
-    }
+    // Attempt to load employee list and departments from proxied backend; fall back to defaults
+    ;(async () => {
+        // load departments for dropdown
+        try {
+            const dresp: any = await $fetch('/api/departments')
+            const dlist = dresp?.data ?? dresp
 
-    loadingTimer = setTimeout(() => {
-        isTableLoading.value = false
-        hasLoadedEmployeeTable.value = true
-    }, 1200)
+            if (Array.isArray(dlist)) {
+                departments.value = dlist.map((d: any) => d.department_name ?? d.name ?? String(d))
+            }
+        } catch (err) {
+            // ignore
+        }
+
+        try {
+            const resp: any = await $fetch('/api/employees')
+            const list = resp?.data ?? resp
+
+            if (Array.isArray(list) && list.length > 0) {
+                sharedEmployeeRows.value = list.map(normalizeEmployeeRow)
+            }
+        } catch (err) {
+            // ignore fetch errors and continue with defaults
+        }
+
+        if (hasLoadedEmployeeTable.value) {
+            isTableLoading.value = false
+            return
+        }
+
+        loadingTimer = setTimeout(() => {
+            isTableLoading.value = false
+            hasLoadedEmployeeTable.value = true
+        }, 1200)
+    })()
 })
 
 onUnmounted(() => {
@@ -207,6 +346,10 @@ onUnmounted(() => {
 
     if (deleteAlertTimer) {
         clearTimeout(deleteAlertTimer)
+    }
+
+    if (errorAlertTimer) {
+        clearTimeout(errorAlertTimer)
     }
 })
 
@@ -240,11 +383,20 @@ onUnmounted(() => {
             <div class="department-and-card-filters">
                 <div class="department-filter-control">
                     <div class="department-dropdown">
-                        <select v-model="departmentQuery" class="filter-select" aria-label="Filter by department">
+                        <select
+                            v-model="departmentQuery"
+                            class="filter-select"
+                            :style="{ width: departmentSelectWidth }"
+                            aria-label="Filter by department"
+                        >
                             <option value="">Department</option>
-                            <option value="HR">HR</option>
-                            <option value="IT">IT</option>
-                            <option value="Finance">Finance</option>
+                            <option
+                                v-for="department in departments"
+                                :key="department"
+                                :value="department"
+                            >
+                                {{ department }}
+                            </option>
                         </select>
                     </div>
 
@@ -305,7 +457,13 @@ onUnmounted(() => {
                                     <EyeIcon class="action-icon" />
                                 </button>
 
-                                <button type="button" class="action-button action-button--delete" :aria-label="`Delete ${employee.name}`" @click="handleDeleteEmployee(employee.id)">
+                                <button
+                                    type="button"
+                                    class="action-button action-button--delete"
+                                    :aria-label="`Delete ${employee.name}`"
+                                    @click="handleDeleteEmployee(employee.id)"
+                                    :title="employee.id === currentUser?.employeeId ? 'You cannot delete your own account' : 'Delete employee'"
+                                >
                                     <TrashIcon class="action-icon" />
                                 </button>
                             </div>
@@ -338,6 +496,15 @@ onUnmounted(() => {
                 title="Success"
                 message="Employee deleted successfully!"
                 variant="success"
+                :dismissible="false"
+            />
+        </div>
+
+        <div v-if="showErrorAlert" class="success-alert-container">
+            <Alert
+                title="Action not allowed"
+                :message="errorMessage"
+                variant="error"
                 :dismissible="false"
             />
         </div>
@@ -548,6 +715,8 @@ onUnmounted(() => {
 @media (max-width: 1024px) {
     .employee-search {
         grid-template-columns: 1fr auto;
+        width: 220px;
+        flex-direction: grid;
     }
 }
 
@@ -572,13 +741,36 @@ onUnmounted(() => {
     .employee-search {
         grid-template-columns: 1fr;
         gap: 0.5rem;
+        justify-items: center;
+    }
+
+    .employee-search > * {
+        width: 220px;
+        max-width: 220px;
     }
 
     .search-button {
-        width: 100%;
+        width: 220px;
         min-height: 38px;
         padding: 8px 10px;
         font-size: 0.82rem;
+    }
+
+    .department-and-card-filters {
+        width: 220px;
+    }
+
+    .department-filter-control {
+        width: 100%;
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .department-dropdown,
+    .filter-select,
+    .clear-filter-button {
+        width: 100% !important;
+        max-width: 100% !important;
     }
 
     .department-dropdown {
@@ -600,8 +792,10 @@ onUnmounted(() => {
 }
 
 .filter-select {
-    width: 100%;
+    width: auto;
     min-height: 36px;
+    min-width: 180px;
+    max-width: 100%;
     border-radius: 10px;
     border: 1px solid #d1d5db;
     background-color: #ffffff;
@@ -624,7 +818,7 @@ onUnmounted(() => {
 
 .department-dropdown {
     position: relative;
-    width: 180px;
+    width: auto;
     max-width: 100%;
     flex: 0 0 auto;
 }

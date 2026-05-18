@@ -1,15 +1,50 @@
 <script setup lang="ts">
 import { ArrowLeftIcon } from '@heroicons/vue/24/outline'
-import { onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import Alert from '~/components/Alert.vue'
 import IconInput from '~/components/IconInput.vue'
 import Button from '~/components/Button.vue'
 import Modal from '~/components/Modal.vue'
 
 type CreatedEmployeePayload = {
+    id: number
     name: string
     department: string
     cardStatus: 'Has Card' | 'No Card'
+    cardNumber: string
+}
+
+type DepartmentOption = {
+    department_id: number
+    department_name: string
+    department_head: number | null
+    positions?: PositionOption[]
+}
+
+type PositionOption = {
+    position_id: number
+    department_id: number
+    position_name: string
+}
+
+type WorkHourOption = {
+    work_hour_id: number
+    time_in: string
+    time_out: string
+    lunch_break_minutes?: number
+}
+
+type LoggedInUser = {
+    employeeId: number
+    accountId: number
+    username: string
+    firstName: string
+    middleName: string
+    lastName: string
+    suffix: string
+    displayName: string
+    role: string
+    department: string
 }
 
 const emit = defineEmits<{
@@ -17,11 +52,27 @@ const emit = defineEmits<{
     employeeCreated: [employee: CreatedEmployeePayload]
 }>()
 
+const userCookie = useCookie<string | null>('ems_user')
+const currentUser = computed<LoggedInUser | null>(() => {
+    if (!userCookie.value) {
+        return null
+    }
+
+    try {
+        return JSON.parse(userCookie.value) as LoggedInUser
+    } catch {
+        return null
+    }
+})
+const transactedById = computed(() => currentUser.value?.employeeId ?? null)
+
 const form = ref({
     department: '',
     position: '',
-    shiftStart: '',
-    shiftEnd: '',
+    morningTimeIn: '',
+    morningTimeOut: '',
+    afternoonTimeIn: '',
+    afternoonTimeOut: '',
     firstName: '',
     middleName: '',
     lastName: '',
@@ -41,15 +92,99 @@ const form = ref({
 
 const showConfirmModal = ref(false)
 const showLoadingModal = ref(false)
+const departments = ref<DepartmentOption[]>([])
+const workHours = ref<WorkHourOption[]>([])
+const existingUsernames = ref<string[]>([])
 const showValidationAlert = ref(false)
 const validationAlertMessage = ref('')
 let validationAlertTimer: ReturnType<typeof setTimeout> | null = null
-const existingUsernames = useState<string[]>('employee-usernames', () => [
-    'joel.kent',
-    'jayneth.valle',
-    'walter.maturan',
-    'jeann.callo',
-])
+
+const availableShiftTimes = computed(() => {
+    return Array.from(new Set(workHours.value.map(workHour => formatTwentyFourHourToMeridiem(workHour.time_in))))
+})
+
+const availableMorningShiftTimes = computed(() => {
+    return availableShiftTimes.value.filter(time => {
+        return time.trim().toUpperCase().endsWith('AM')
+    })
+})
+
+const availableAfternoonShiftTimes = computed(() => {
+    return availableShiftTimes.value.filter(time => {
+        return time.trim().toUpperCase().endsWith('PM')
+    })
+})
+
+const availablePositions = computed(() => {
+    const selectedDepartmentId = Number(form.value.department)
+
+    if (!selectedDepartmentId) {
+        return []
+    }
+
+    return departments.value.find(department => department.department_id === selectedDepartmentId)?.positions ?? []
+})
+
+const selectedDepartmentOption = computed(() => {
+    const selectedDepartmentId = Number(form.value.department)
+
+    if (!selectedDepartmentId) {
+        return null
+    }
+
+    return departments.value.find(department => department.department_id === selectedDepartmentId) ?? null
+})
+
+const selectedPositionOption = computed(() => {
+    const selectedPositionId = Number(form.value.position)
+
+    if (!selectedPositionId) {
+        return null
+    }
+
+    return availablePositions.value.find(position => position.position_id === selectedPositionId) ?? null
+})
+
+function getBackendErrorMessage(err: any, fallback: string) {
+    return err?.data?.message || err?.response?._data?.message || err?.message || fallback
+}
+
+function normalizeShiftTimeToTwentyFourHour(value: string) {
+    const match = value.match(/^(\d{1,2}):(\d{2})\s?(AM|PM)$/i)
+
+    if (!match) {
+        return ''
+    }
+
+    let hours = Number.parseInt(match[1] ?? '0', 10)
+    const minutes = match[2] ?? '00'
+    const meridiem = (match[3] ?? 'AM').toUpperCase()
+
+    if (hours === 12) {
+        hours = 0
+    }
+
+    if (meridiem === 'PM') {
+        hours += 12
+    }
+
+    return `${String(hours).padStart(2, '0')}:${minutes}`
+}
+
+function formatTwentyFourHourToMeridiem(value: string) {
+    const match = value.match(/^(\d{2}):(\d{2})(?::\d{2})?$/)
+
+    if (!match) {
+        return value
+    }
+
+    const hours = Number.parseInt(match[1] ?? '0', 10)
+    const minutes = match[2] ?? '00'
+    const meridiem = hours >= 12 ? 'PM' : 'AM'
+    const displayHours = hours % 12 || 12
+
+    return `${String(displayHours).padStart(2, '0')}:${minutes} ${meridiem}`
+}
 
 function normalizeUsername(value: string) {
     return value.trim().toLowerCase()
@@ -95,14 +230,38 @@ function formatMinutesToMeridiem(totalMinutes: number) {
     return `${String(hours12).padStart(2, '0')}:${paddedMinutes} ${meridiem}`
 }
 
-function handleShiftStartChange() {
-    const startMinutes = parseShiftTimeToMinutes(form.value.shiftStart)
-    if (startMinutes === null) {
-        form.value.shiftEnd = ''
-        return
+
+function getWorkHourForShift(timeIn: string, timeOut: string) {
+    const normalizedTimeIn = normalizeShiftTimeToTwentyFourHour(timeIn)
+    const normalizedTimeOut = normalizeShiftTimeToTwentyFourHour(timeOut)
+
+    if (!normalizedTimeIn || !normalizedTimeOut) {
+        return null
     }
 
-    form.value.shiftEnd = formatMinutesToMeridiem(startMinutes + 8 * 60)
+    return workHours.value.find(workHour => {
+        const existingTimeIn = normalizeShiftTimeToTwentyFourHour(formatTwentyFourHourToMeridiem(workHour.time_in))
+        const existingTimeOut = normalizeShiftTimeToTwentyFourHour(formatTwentyFourHourToMeridiem(workHour.time_out))
+
+        return existingTimeIn === normalizedTimeIn && existingTimeOut === normalizedTimeOut
+    })
+}
+
+function getTimeOutForTimeIn(timeIn: string) {
+    if (!timeIn) {
+        return ''
+    }
+
+    const workHour = workHours.value.find(wh => {
+        const whTimeIn = formatTwentyFourHourToMeridiem(wh.time_in)
+        return whTimeIn === timeIn
+    })
+
+    if (!workHour) {
+        return ''
+    }
+
+    return formatTwentyFourHourToMeridiem(workHour.time_out)
 }
 
 function goBack() {
@@ -120,6 +279,126 @@ function showErrorAlert(message: string) {
     validationAlertTimer = setTimeout(() => {
         showValidationAlert.value = false
     }, 3000)
+}
+
+function isDepartmentHeadPosition(position: PositionOption) {
+    const normalizedName = position.position_name.trim().toLowerCase()
+    return normalizedName === 'department head' || normalizedName.includes('head')
+}
+
+function isDepartmentHeadPositionDisabled(position: PositionOption) {
+    return Boolean(selectedDepartmentOption.value?.department_head) && isDepartmentHeadPosition(position)
+}
+
+async function loadDepartments() {
+    try {
+        const resp: any = await $fetch('/api/departments')
+        const payload = resp?.data ?? resp
+
+        if (Array.isArray(payload)) {
+            departments.value = payload
+        }
+    } catch (err) {
+        console.error('Failed to load departments:', err)
+    }
+}
+
+async function loadWorkHours() {
+    try {
+        const resp: any = await $fetch('/api/work-hours')
+        const payload = resp?.data ?? resp
+
+        if (Array.isArray(payload)) {
+            workHours.value = payload
+        }
+    } catch (err) {
+        console.error('Failed to load work hours:', err)
+    }
+}
+
+async function loadExistingUsernames() {
+    try {
+        const resp: any = await $fetch('/api/employees')
+        const payload = resp?.data ?? resp
+
+        if (Array.isArray(payload)) {
+            existingUsernames.value = payload
+                .map((employee: any) => employee?.raw?.user_accounts?.username ?? employee?.user_accounts?.username ?? '')
+                .filter(Boolean)
+                .map((value: string) => normalizeUsername(value))
+        }
+    } catch (err) {
+        console.error('Failed to load existing usernames:', err)
+    }
+}
+
+async function resolveWorkHourIds() {
+    const morningTimeIn = form.value.morningTimeIn
+    const morningTimeOut = form.value.morningTimeOut
+    const afternoonTimeIn = form.value.afternoonTimeIn
+    const afternoonTimeOut = form.value.afternoonTimeOut
+
+    if (!morningTimeIn || !morningTimeOut || !afternoonTimeIn || !afternoonTimeOut) {
+        throw new Error('Please select all shift times (morning and afternoon)')
+    }
+
+    // Resolve morning shift
+    const morningWorkHour = getWorkHourForShift(morningTimeIn, morningTimeOut)
+    let morningWorkHourId = morningWorkHour?.work_hour_id
+
+    if (!morningWorkHourId) {
+        if (!transactedById.value) {
+            throw new Error('You must be signed in to create a work hour')
+        }
+
+        const createdMorning: any = await $fetch('/api/work-hours', {
+            method: 'POST',
+            body: {
+                transacted_by: transactedById.value,
+                time_in: morningTimeIn,
+                time_out: morningTimeOut,
+            },
+        })
+
+        const morningPayload = createdMorning?.data ?? createdMorning
+        morningWorkHourId = morningPayload?.work_hour_id
+
+        if (!morningWorkHourId) {
+            throw new Error('Unable to create morning work hour')
+        }
+
+        workHours.value = [...workHours.value, morningPayload]
+    }
+
+    // Resolve afternoon shift
+    const afternoonWorkHour = getWorkHourForShift(afternoonTimeIn, afternoonTimeOut)
+    let afternoonWorkHourId = afternoonWorkHour?.work_hour_id
+
+    if (!afternoonWorkHourId) {
+        if (!transactedById.value) {
+            throw new Error('You must be signed in to create a work hour')
+        }
+
+        const createdAfternoon: any = await $fetch('/api/work-hours', {
+            method: 'POST',
+            body: {
+                transacted_by: transactedById.value,
+                time_in: afternoonTimeIn,
+                time_out: afternoonTimeOut,
+            },
+        })
+
+        const afternoonPayload = createdAfternoon?.data ?? createdAfternoon
+        afternoonWorkHourId = afternoonPayload?.work_hour_id
+
+        if (!afternoonWorkHourId) {
+            throw new Error('Unable to create afternoon work hour')
+        }
+
+        workHours.value = [...workHours.value, afternoonPayload]
+    }
+
+    return { morningWorkHourId, afternoonWorkHourId }
 }
 
 function validateBasicFields() {
@@ -142,6 +421,16 @@ function validateBasicFields() {
         return false
     }
 
+    if (form.value.password !== form.value.confirmPassword) {
+        showErrorAlert('Passwords do not match')
+        return false
+    }
+
+    if (selectedPositionOption.value && isDepartmentHeadPositionDisabled(selectedPositionOption.value)) {
+        showErrorAlert('This department already has a department head assigned')
+        return false
+    }
+
     return true
 }
 
@@ -150,16 +439,18 @@ function handleSubmit() {
         return
     }
 
-    const startMinutes = parseShiftTimeToMinutes(form.value.shiftStart)
-    const endMinutes = parseShiftTimeToMinutes(form.value.shiftEnd)
-
-    if (startMinutes === null || endMinutes === null) {
-        showErrorAlert('Please select shift start and shift end')
+    if (!selectedDepartmentOption.value || !selectedPositionOption.value) {
+        showErrorAlert('Please select a valid department and position')
         return
     }
 
-    if (endMinutes <= startMinutes || endMinutes - startMinutes !== 8 * 60) {
-        showErrorAlert('Shift duration must be exactly 8 hours')
+    if (selectedPositionOption.value.department_id !== selectedDepartmentOption.value.department_id) {
+        showErrorAlert('Selected position does not belong to the selected department')
+        return
+    }
+
+    if (!form.value.morningTimeIn || !form.value.morningTimeOut || !form.value.afternoonTimeIn || !form.value.afternoonTimeOut) {
+        showErrorAlert('Please select all shift times (morning and afternoon)')
         return
     }
 
@@ -173,35 +464,96 @@ function handleSubmit() {
     showConfirmModal.value = true
 }
 
-function confirmSubmit() {
+async function confirmSubmit() {
     if (!validateBasicFields()) {
+        showConfirmModal.value = false
+        return
+    }
+
+    if (!selectedDepartmentOption.value || !selectedPositionOption.value) {
+        showErrorAlert('Please select a valid department and position')
+        showConfirmModal.value = false
+        return
+    }
+
+    if (!transactedById.value) {
+        showErrorAlert('You must be signed in to create an employee')
         showConfirmModal.value = false
         return
     }
 
     showConfirmModal.value = false
     showLoadingModal.value = true
-    
-    setTimeout(() => {
-        showLoadingModal.value = false
-        console.log('Create employee:', form.value)
+
+    try {
+        const { morningWorkHourId, afternoonWorkHourId } = await resolveWorkHourIds()
+
+        const createdEmployeeResponse: any = await $fetch('/api/employees', {
+            method: 'POST',
+            body: {
+                transacted_by: transactedById.value,
+                department_id: Number(selectedDepartmentOption.value.department_id),
+                position_id: Number(selectedPositionOption.value.position_id),
+                morning_work_hour_id: morningWorkHourId,
+                afternoon_work_hour_id: afternoonWorkHourId,
+                first_name: form.value.firstName.trim(),
+                middle_name: form.value.middleName.trim(),
+                last_name: form.value.lastName.trim(),
+                suffix: form.value.suffix.trim(),
+                gender: form.value.gender,
+                birthdate: form.value.birthdate,
+                province: form.value.province.trim(),
+                city: form.value.city.trim(),
+                barangay: form.value.barangay.trim(),
+                zip_code: form.value.zipCode.trim(),
+                contact_number: form.value.contactNumber.trim(),
+                username: normalizeUsername(form.value.username),
+                password: form.value.password,
+            },
+        })
+
+        const payload = createdEmployeeResponse?.data ?? createdEmployeeResponse
+        const createdId = payload?.employee_id ?? payload?.id ?? 0
         const middleInitial = form.value.middleName ? ` ${form.value.middleName.charAt(0)}.` : ''
         const fullName = `${form.value.lastName}, ${form.value.firstName}${middleInitial}`
 
         emit('employeeCreated', {
+            id: createdId,
             name: fullName,
-            department: form.value.department,
+            department: selectedDepartmentOption.value.department_name,
             cardStatus: 'No Card',
+            cardNumber: payload?.cards?.card_number ?? '',
         })
 
-        const normalizedUsername = normalizeUsername(form.value.username)
-        if (!existingUsernames.value.includes(normalizedUsername)) {
-            existingUsernames.value = [...existingUsernames.value, normalizedUsername]
-        }
+        existingUsernames.value = [...existingUsernames.value, normalizeUsername(form.value.username)]
 
+        showLoadingModal.value = false
         emit('back')
-    }, 1500)
+    } catch (err) {
+        showLoadingModal.value = false
+        showErrorAlert(getBackendErrorMessage(err, 'Failed to create employee'))
+    }
 }
+
+watch(() => form.value.department, () => {
+    form.value.position = ''
+})
+
+watch(() => form.value.morningTimeIn, () => {
+    form.value.morningTimeOut = getTimeOutForTimeIn(form.value.morningTimeIn)
+})
+
+watch(() => form.value.afternoonTimeIn, () => {
+    form.value.afternoonTimeOut = getTimeOutForTimeIn(form.value.afternoonTimeIn)
+})
+
+onMounted(async () => {
+    await Promise.all([
+        loadDepartments(),
+        loadWorkHours(),
+        loadExistingUsernames(),
+    ])
+})
 
 onUnmounted(() => {
     if (validationAlertTimer) {
@@ -246,48 +598,65 @@ onUnmounted(() => {
                             <label class="select-field-label" for="department">Department <span class="required-indicator">*</span></label>
                             <select id="department" v-model="form.department" class="select-field" aria-label="Department" required>
                                 <option value="">Select department</option>
-                                <option value="HR">Human Resources</option>
-                                <option value="IT">Information Technology</option>
-                                <option value="Finance">Finance</option>
-                                <option value="Operations">Operations</option>
+                                <option
+                                    v-for="department in departments"
+                                    :key="department.department_id"
+                                    :value="String(department.department_id)"
+                                >
+                                    {{ department.department_name }}
+                                </option>
                             </select>
                         </div>
                         <div class="select-field-wrap">
                             <label class="select-field-label" for="position">Position <span class="required-indicator">*</span></label>
                             <select id="position" v-model="form.position" class="select-field" aria-label="Position" required>
                                 <option value="">Select position</option>
-                                <option value="Manager">Manager</option>
-                                <option value="Senior">Senior</option>
-                                <option value="Junior">Junior</option>
-                                <option value="Intern">Intern</option>
+                                <option
+                                    v-for="position in availablePositions"
+                                    :key="position.position_id"
+                                    :value="String(position.position_id)"
+                                    :disabled="isDepartmentHeadPositionDisabled(position)"
+                                >
+                                    {{ position.position_name }}{{ isDepartmentHeadPositionDisabled(position) ? ' (Assigned)' : '' }}
+                                </option>
                             </select>
                         </div>
                     </div>
 
                     <h3 class="subsection-title">Shift Time</h3>
-                    <div class="new-employee-grid">
-                        <div class="select-field-wrap">
-                            <label class="select-field-label" for="shiftStart">Shift Start <span class="required-indicator">*</span></label>
-                            <select id="shiftStart" v-model="form.shiftStart" class="select-field" aria-label="Shift Start" required @change="handleShiftStartChange">
-                                <option value="">Select shift start</option>
-                                <option value="07:00 AM">07:00 AM</option>
-                                <option value="08:00 AM">08:00 AM</option>
-                                <option value="08:30 AM">08:30 AM</option>
-                                <option value="09:00 AM">09:00 AM</option>
-                                <option value="10:00 AM">10:00 AM</option>
-                            </select>
+                    <div class="shift-container">
+                        <div class="shift-section">
+                            <h4 class="shift-title">Morning Shift</h4>
+                            <div class="shift-grid">
+                                <div class="select-field-wrap">
+                                    <label class="select-field-label" for="morningTimeIn">Time In <span class="required-indicator">*</span></label>
+                                    <select id="morningTimeIn" v-model="form.morningTimeIn" class="select-field" aria-label="Morning Time In" required>
+                                        <option value="">Select time in</option>
+                                        <option v-for="time in availableMorningShiftTimes" :key="time" :value="time">{{ time }}</option>
+                                    </select>
+                                </div>
+                                <div class="select-field-wrap">
+                                    <label class="select-field-label" for="morningTimeOut">Time Out <span class="required-indicator">*</span></label>
+                                    <input id="morningTimeOut" v-model="form.morningTimeOut" type="text" class="input-field" aria-label="Morning Time Out" readonly />
+                                </div>
+                            </div>
                         </div>
-                        <div class="select-field-wrap">
-                            <label class="select-field-label" for="shiftEnd">Shift End <span class="required-indicator">*</span></label>
-                            <select id="shiftEnd" v-model="form.shiftEnd" class="select-field" aria-label="Shift End" required>
-                                <option value="">Select shift end</option>
-                                <option value="03:00 PM">03:00 PM</option>
-                                <option value="04:00 PM">04:00 PM</option>
-                                <option value="04:30 PM">04:30 PM</option>
-                                <option value="05:00 PM">05:00 PM</option>
-                                <option value="06:00 PM">06:00 PM</option>
-                                <option value="07:00 PM">07:00 PM</option>
-                            </select>
+
+                        <div class="shift-section">
+                            <h4 class="shift-title">Afternoon Shift</h4>
+                            <div class="shift-grid">
+                                <div class="select-field-wrap">
+                                    <label class="select-field-label" for="afternoonTimeIn">Time In <span class="required-indicator">*</span></label>
+                                    <select id="afternoonTimeIn" v-model="form.afternoonTimeIn" class="select-field" aria-label="Afternoon Time In" required>
+                                        <option value="">Select time in</option>
+                                        <option v-for="time in availableAfternoonShiftTimes" :key="time" :value="time">{{ time }}</option>
+                                    </select>
+                                </div>
+                                <div class="select-field-wrap">
+                                    <label class="select-field-label" for="afternoonTimeOut">Time Out <span class="required-indicator">*</span></label>
+                                    <input id="afternoonTimeOut" v-model="form.afternoonTimeOut" type="text" class="input-field" aria-label="Afternoon Time Out" readonly />
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -415,10 +784,18 @@ onUnmounted(() => {
             <div class="confirmation-content">
                 <div class="confirmation-section">
                     <h4 class="section-header">Job Information</h4>
-                    <p><strong>Department:</strong> {{ form.department || 'Not selected' }}</p>
-                    <p><strong>Position:</strong> {{ form.position || 'Not selected' }}</p>
-                    <p><strong>Shift Start:</strong> {{ form.shiftStart || 'Not selected' }}</p>
-                    <p><strong>Shift End:</strong> {{ form.shiftEnd || 'Not selected' }}</p>
+                    <p><strong>Department:</strong> {{ selectedDepartmentOption?.department_name || 'Not selected' }}</p>
+                    <p><strong>Position:</strong> {{ selectedPositionOption?.position_name || 'Not selected' }}</p>
+                </div>
+                <div class="confirmation-section">
+                    <h4 class="section-header">Morning Shift</h4>
+                    <p><strong>Time In:</strong> {{ form.morningTimeIn || 'Not selected' }}</p>
+                    <p><strong>Time Out:</strong> {{ form.morningTimeOut || 'Not selected' }}</p>
+                </div>
+                <div class="confirmation-section">
+                    <h4 class="section-header">Afternoon Shift</h4>
+                    <p><strong>Time In:</strong> {{ form.afternoonTimeIn || 'Not selected' }}</p>
+                    <p><strong>Time Out:</strong> {{ form.afternoonTimeOut || 'Not selected' }}</p>
                 </div>
                 <div class="confirmation-section">
                     <h4 class="section-header">Personal Information</h4>
@@ -565,6 +942,34 @@ onUnmounted(() => {
     gap: 0.9rem;
 }
 
+.shift-container {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+}
+
+.shift-section {
+    display: grid;
+    gap: 0.75rem;
+    padding: 1rem;
+    background: #f8fafc;
+    border-radius: 10px;
+    border: 1px solid #e5e7eb;
+}
+
+.shift-title {
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.shift-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.9rem;
+}
+
 .age-input-wrapper {
     max-width: 120px;
 }
@@ -618,6 +1023,32 @@ onUnmounted(() => {
     box-shadow: 0 0 0 3px rgba(99, 91, 255, 0.2);
 }
 
+.select-field:disabled {
+    background-color: #f3f4f6;
+    color: #9ca3af;
+    cursor: not-allowed;
+    border-color: #e5e7eb;
+}
+
+.input-field {
+    width: 100%;
+    min-height: 36px;
+    border-radius: 10px;
+    border: 1px solid #d1d5db;
+    background-color: #f9fafb;
+    color: #111827;
+    font-size: 0.875rem;
+    padding: 8px 12px;
+    outline: none;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    cursor: not-allowed;
+}
+
+.input-field:readonly {
+    background-color: #f3f4f6;
+    color: #6b7280;
+}
+
 .form-footer {
     display: flex;
     justify-content: flex-end;
@@ -642,6 +1073,10 @@ onUnmounted(() => {
 @media (max-width: 1100px) {
     .new-employee-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .shift-container {
+        grid-template-columns: 1fr;
     }
 }
 

@@ -7,6 +7,39 @@ import Modal from '~/components/Modal.vue'
 import Alert from '~/components/Alert.vue'
 import Input from '~/components/Input.vue'
 
+interface Employee {
+    employee_id: number
+    user_informations: {
+        first_name: string
+        last_name: string
+    }
+}
+
+interface DepartmentFromAPI {
+    department_id: number
+    department_name: string
+    department_head: number | null
+}
+
+interface DepartmentRow {
+    id: number
+    name: string
+    head: string
+}
+
+type LoggedInUser = {
+    employeeId: number
+    accountId: number
+    username: string
+    firstName: string
+    middleName: string
+    lastName: string
+    suffix: string
+    displayName: string
+    role: string
+    department: string
+}
+
 const emit = defineEmits<{
     viewDepartment: [department: { id: number; name: string; head: string }]
 }>()
@@ -15,6 +48,20 @@ const selectedDepartment = useState<{ id: number; name: string; head: string } |
     'selected-department-info',
     () => null,
 )
+
+const userCookie = useCookie<string | null>('ems_user')
+const currentUser = computed<LoggedInUser | null>(() => {
+    if (!userCookie.value) {
+        return null
+    }
+
+    try {
+        return JSON.parse(userCookie.value) as LoggedInUser
+    } catch {
+        return null
+    }
+})
+const transactedById = computed(() => currentUser.value?.employeeId ?? null)
 
 const searchQuery = ref('')
 const departmentFilter = ref('')
@@ -39,12 +86,7 @@ let successAlertTimer: ReturnType<typeof setTimeout> | null = null
 let deleteDepartmentTimer: ReturnType<typeof setTimeout> | null = null
 let deleteSuccessAlertTimer: ReturnType<typeof setTimeout> | null = null
 
-const departments = ref([
-    { id: 1, name: 'Human Resources', head: 'Jayneth Valle'},
-    { id: 2, name: 'Information Technology', head: 'Joel Kent Lascuna'},
-    { id: 3, name: 'Finance', head: 'Walter Maturan'},
-    { id: 4, name: 'Operations', head: 'Je-ann Callo'},
-])
+const sharedDepartmentRows = useState<DepartmentRow[]>('departments-table-rows', () => [])
 
 function handleViewDepartment(department: { id: number; name: string; head: string }) {
     selectedDepartment.value = department
@@ -64,6 +106,30 @@ function closeDeleteDepartmentModal() {
     departmentToDelete.value = null
 }
 
+async function loadDepartments() {
+    const deptResp: any = await $fetch('/api/departments')
+    const deptList = deptResp?.data ?? deptResp
+
+    if (!Array.isArray(deptList)) {
+        sharedDepartmentRows.value = []
+        return
+    }
+
+    const departmentsWithHeads = await Promise.all(
+        deptList.map(async (dept: DepartmentFromAPI) => {
+            const headName = await getEmployeeHead(dept.department_head)
+
+            return {
+                id: dept.department_id,
+                name: dept.department_name,
+                head: headName,
+            }
+        })
+    )
+
+    sharedDepartmentRows.value = departmentsWithHeads
+}
+
 function deleteDepartment() {
     if (!departmentToDelete.value) {
         return
@@ -74,8 +140,14 @@ function deleteDepartment() {
     isDeleteDepartmentModalOpen.value = false
     isDeleteDepartmentLoadingModalOpen.value = true
 
-    deleteDepartmentTimer = setTimeout(() => {
-        departments.value = departments.value.filter((department) => department.id !== targetDepartmentId)
+    deleteDepartmentTimer = setTimeout(async () => {
+        try {
+            await $fetch(`/api/departments/${targetDepartmentId}`, { method: 'DELETE' })
+            await loadDepartments()
+        } catch (err) {
+            // ignore backend error and continue
+            sharedDepartmentRows.value = sharedDepartmentRows.value.filter((department) => department.id !== targetDepartmentId)
+        }
 
         if (selectedDepartment.value?.id === targetDepartmentId) {
             selectedDepartment.value = null
@@ -126,7 +198,11 @@ function addDepartment() {
         return
     }
 
-    const isDepartmentAlreadyRegistered = departments.value.some(
+    if (!transactedById.value) {
+        return
+    }
+
+    const isDepartmentAlreadyRegistered = sharedDepartmentRows.value.some(
         (department) => department.name.toLowerCase() === normalizedName.toLowerCase(),
     )
 
@@ -140,28 +216,41 @@ function addDepartment() {
     closeAddDepartmentConfirmationModal()
     isAddDepartmentLoadingModalOpen.value = true
 
-    const highestDepartmentId = departments.value.reduce((highestId, department) => {
-        return department.id > highestId ? department.id : highestId
-    }, 0)
+    addDepartmentTimer = setTimeout(async () => {
+        try {
+            const response: any = await $fetch('/api/departments', {
+                method: 'POST',
+                body: {
+                    department_name: normalizedName,
+                    transacted_by: transactedById.value,
+                }
+            })
 
-    addDepartmentTimer = setTimeout(() => {
-        departments.value.push({
-            id: highestDepartmentId + 1,
-            name: normalizedName,
-            head: 'Unassigned',
-        })
+            const newDepartmentData = response?.data ?? response
 
-        isAddDepartmentLoadingModalOpen.value = false
-        isDepartmentAddedAlertVisible.value = true
-        closeAddDepartmentModal()
+            if (!newDepartmentData?.department_id) {
+                throw new Error('Department was not created.')
+            }
 
-        if (successAlertTimer) {
-            clearTimeout(successAlertTimer)
+            await loadDepartments()
+
+            isDepartmentAddedAlertVisible.value = true
+
+            if (successAlertTimer) {
+                clearTimeout(successAlertTimer)
+            }
+
+            successAlertTimer = setTimeout(() => {
+                isDepartmentAddedAlertVisible.value = false
+            }, 2600)
+
+            closeAddDepartmentModal()
+        } catch (err) {
+            isDuplicateDepartmentAlertVisible.value = false
+        } finally {
+            isAddDepartmentLoadingModalOpen.value = false
+            closeAddDepartmentConfirmationModal()
         }
-
-        successAlertTimer = setTimeout(() => {
-            isDepartmentAddedAlertVisible.value = false
-        }, 2600)
     }, 1200)
 }
 
@@ -176,14 +265,24 @@ function clearDepartmentFilter() {
 }
 
 const departmentOptions = computed(() => {
-    return [...new Set(departments.value.map((department) => department.name))]
+    return [...new Set(sharedDepartmentRows.value.map((department) => department.name))]
+})
+
+const departmentFilterWidth = computed(() => {
+    if (!departmentFilter.value) {
+        return '190px'
+    }
+
+    const length = departmentFilter.value.length
+    const width = Math.min(Math.max(length * 10 + 50, 190), 360)
+    return `${width}px`
 })
 
 const filteredDepartments = computed(() => {
     const query = appliedSearchQuery.value.trim().toLowerCase()
     const selectedDepartment = appliedDepartmentFilter.value
 
-    return departments.value.filter((department) => {
+    return sharedDepartmentRows.value.filter((department) => {
         const matchesDepartment = !selectedDepartment || department.name === selectedDepartment
         const matchesSearch =
             !query ||
@@ -210,16 +309,47 @@ watch(departmentFilter, (value) => {
     appliedDepartmentFilter.value = value
 })
 
-onMounted(() => {
-    if (hasLoadedDepartmentTable.value) {
-        isTableLoading.value = false
-        return
-    }
+async function getEmployeeHead(employeeId: number | null): Promise<string> {
+    if (!employeeId) return 'Unassigned'
+    
+    try {
+        const empResp: any = await $fetch(`/api/employees/${employeeId}`)
+        const emp = empResp?.data ?? empResp
 
-    loadingTimer = setTimeout(() => {
-        isTableLoading.value = false
-        hasLoadedDepartmentTable.value = true
-    }, 1200)
+        if (emp?.name) {
+            return emp.name
+        }
+
+        if (emp?.raw?.user_informations) {
+            const info = emp.raw.user_informations
+            return `${info.last_name}, ${info.first_name}`
+        }
+    } catch (err) {
+        // ignore error
+    }
+    
+    return 'Unassigned'
+}
+
+onMounted(() => {
+    // Attempt to load departments from backend; fall back to empty list
+    ;(async () => {
+        try {
+            await loadDepartments()
+        } catch (err) {
+            // ignore fetch errors and continue with defaults
+        }
+
+        if (hasLoadedDepartmentTable.value) {
+            isTableLoading.value = false
+            return
+        }
+
+        loadingTimer = setTimeout(() => {
+            isTableLoading.value = false
+            hasLoadedDepartmentTable.value = true
+        }, 1200)
+    })()
 })
 
 onUnmounted(() => {
@@ -294,7 +424,12 @@ onUnmounted(() => {
 
             <div class="department-filter-control">
                 <div class="filter-dropdown">
-                    <select v-model="departmentFilter" class="filter-select" aria-label="Filter department">
+                    <select
+                        v-model="departmentFilter"
+                        class="filter-select"
+                        :style="{ width: departmentFilterWidth }"
+                        aria-label="Filter department"
+                    >
                         <option value="">All Departments</option>
                         <option v-for="option in departmentOptions" :key="option" :value="option">
                             {{ option }}
@@ -591,9 +726,9 @@ onUnmounted(() => {
 
 .filter-dropdown {
     position: relative;
-    width: 190px;
+    width: auto;
     min-width: 180px;
-    max-width: 240px;
+    max-width: 100%;
 }
 
 .department-filter-control {
@@ -957,6 +1092,7 @@ onUnmounted(() => {
     .department-search {
         grid-template-columns: 1fr auto auto;
         align-items: end;
+        width: 220px;
     }
 
     .filter-dropdown {

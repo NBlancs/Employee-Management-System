@@ -17,6 +17,32 @@ import {
 const route = useRoute()
 const router = useRouter()
 const authCookie = useCookie<string | null>('ems_auth')
+const userCookie = useCookie<string | null>('ems_user')
+
+type LoggedInUser = {
+  employeeId: number
+  accountId: number
+  username: string
+  firstName: string
+  middleName: string
+  lastName: string
+  suffix: string
+  displayName: string
+  role: string
+  department: string
+}
+
+const loggedInUser = computed<LoggedInUser | null>(() => {
+  if (!userCookie.value) {
+    return null
+  }
+
+  try {
+    return JSON.parse(userCookie.value) as LoggedInUser
+  } catch {
+    return null
+  }
+})
 
 function getTabFromQuery(queryValue: unknown) {
   if (Array.isArray(queryValue)) {
@@ -44,12 +70,36 @@ if (loginQuery === 'success') {
   showSignInAlert.value = true
 }
 
-const userInfo = {
-  firstName: 'Filemon Jr.',
-  lastName: 'Galanida',
-  role: 'Admin',
-  avatar: 'FG',
-}
+const userInfo = computed(() => {
+  const u = loggedInUser.value
+
+  if (!u) {
+    return {
+      fullName: 'Guest User',
+      role: 'Guest',
+      avatar: 'GU',
+    }
+  }
+
+  const middleInitial = u.middleName
+    ? `${u.middleName.charAt(0).toUpperCase()}.`
+    : ''
+
+  const suffixPart = u.suffix ? ` ${u.suffix}` : ''
+
+  const fullName =
+    `${u.lastName}, ${u.firstName}${suffixPart}` +
+    (middleInitial ? `, ${middleInitial}` : '')
+
+  const initials =
+    `${u.firstName.charAt(0)}${u.lastName.charAt(0)}`.toUpperCase()
+
+  return {
+    fullName,
+    role: u.role,
+    avatar: initials,
+  }
+})
 
 const currentTabLabel = computed(() => {
   if (activeTab.value === 'settings') {
@@ -118,6 +168,7 @@ async function confirmLogout() {
   await new Promise((resolve) => setTimeout(resolve, 1400))
 
   authCookie.value = null
+  userCookie.value = null
   isLoggingOutOpen.value = false
   await navigateTo('/landing')
 }
@@ -161,7 +212,7 @@ onUnmounted(() => {
       <Alert
         v-if="showSignInAlert"
         title="Signed in successfully"
-        message="Signed in as Admin"
+        :message="`Signed in as ${userInfo.role}`"
         variant="success"
         dismissible
         @close="showSignInAlert = false"
@@ -176,7 +227,7 @@ onUnmounted(() => {
               {{ userInfo.avatar }}
             </div>
             <div class="user-info">
-              <h2>{{ userInfo.lastName }}, {{ userInfo.firstName }}</h2>
+              <h5>{{ userInfo.fullName }}</h5>
               <span class="role-badge">{{ userInfo.role }}</span>
             </div>
           </div>

@@ -17,6 +17,7 @@ interface DepartmentInfoData {
 }
 
 interface PositionTableRow {
+    positionId: number
     position: string
     salary: string
     totalEmployees: number
@@ -28,24 +29,65 @@ interface PositionTableColumn {
     header: string
 }
 
+interface BackendPosition {
+    position_id: number
+    department_id?: number
+    position_name: string
+    employees?: Array<unknown>
+    salaries?: {
+        salary_id?: number
+        amount?: string | number
+    } | null
+    departments?: {
+        department_id?: number
+    } | null
+}
+
+type LoggedInUser = {
+    employeeId: number
+    accountId: number
+    username: string
+    firstName: string
+    middleName: string
+    lastName: string
+    suffix: string
+    displayName: string
+    role: string
+    department: string
+}
+
+type SalaryOption = {
+    salary_id: number
+    amount: string
+}
+
 const props = defineProps<{
     department?: DepartmentInfoData | null
 }>()
 
 const selectedDepartment = useState<DepartmentInfoData | null>('selected-department-info', () => null)
+const userCookie = useCookie<string | null>('ems_user')
 
-const activeDepartment = computed(() => props.department ?? selectedDepartment.value)
+const loadedDepartment = ref<DepartmentInfoData | null>(null)
+const activeDepartment = computed(() => loadedDepartment.value ?? props.department ?? selectedDepartment.value)
+const isDepartmentLoading = ref(false)
 const searchQuery = ref('')
 const isUpdateSalaryModalOpen = ref(false)
 const selectedUpdatePosition = ref('')
+const selectedUpdatePositionId = ref<number | null>(null)
 const selectedCurrentSalary = ref('')
-const newSalaryAmount = ref('')
 const isUpdateSalaryLoadingModalOpen = ref(false)
 const isSalaryUpdatedAlertVisible = ref(false)
-const hasCurrentSalaryError = ref(false)
-const hasNewSalaryAmountError = ref(false)
-const hasSameSalaryAmountError = ref(false)
-const hasNewSalaryAmountFormatError = ref(false)
+const isUpdateNewSalaryOptionChecked = ref(false)
+const isUpdateCurrentSalaryOptionChecked = ref(false)
+const updateNewSalaryAmount = ref('')
+const selectedUpdateExistingSalary = ref('')
+const backendSalaries = ref<SalaryOption[]>([])
+const hasUpdateSalaryOptionError = ref(false)
+const hasUpdateNewSalaryAmountError = ref(false)
+const hasUpdateNewSalaryAmountFormatError = ref(false)
+const hasUpdateNewSalaryDuplicateError = ref(false)
+const hasUpdateExistingSalaryError = ref(false)
 const isAddPositionModalOpen = ref(false)
 const isConfirmAddPositionModalOpen = ref(false)
 const isAddPositionLoadingModalOpen = ref(false)
@@ -62,29 +104,30 @@ const hasAddNewSalaryAmountFormatError = ref(false)
 const hasAddCurrentSalaryError = ref(false)
 const isPositionAddedAlertVisible = ref(false)
 const isPositionDeletedAlertVisible = ref(false)
-const addedPositionsCount = ref(0)
 const selectedDeletePosition = ref('')
 const isDeletePositionModalOpen = ref(false)
 const isDeletePositionLoadingModalOpen = ref(false)
-const isUpdateDepartmentHeadModalOpen = ref(false)
-const isConfirmUpdateDepartmentHeadModalOpen = ref(false)
-const newDepartmentHeadName = ref('')
-const hasDepartmentHeadNameError = ref(false)
-const hasDepartmentHeadSameError = ref(false)
-const isUpdateDepartmentHeadLoadingModalOpen = ref(false)
-const isDepartmentHeadUpdatedAlertVisible = ref(false)
+const backendPositions = ref<BackendPosition[]>([])
+
+const currentUser = computed<LoggedInUser | null>(() => {
+    if (!userCookie.value) {
+        return null
+    }
+
+    try {
+        return JSON.parse(userCookie.value) as LoggedInUser
+    } catch {
+        return null
+    }
+})
+
+const transactedById = computed(() => currentUser.value?.employeeId ?? null)
 let addPositionTimer: ReturnType<typeof setTimeout> | null = null
 let updateSalaryTimer: ReturnType<typeof setTimeout> | null = null
 let deletePositionTimer: ReturnType<typeof setTimeout> | null = null
-let updateDepartmentHeadTimer: ReturnType<typeof setTimeout> | null = null
 let successAlertTimer: ReturnType<typeof setTimeout> | null = null
 
-const positionRows = ref<PositionTableRow[]>([
-    { position: 'HR Officer', salary: '1,800', totalEmployees: 5 },
-    { position: 'IT Support Specialist', salary: '2,300', totalEmployees: 12 },
-    { position: 'Accountant', salary: '2,100', totalEmployees: 7 },
-    { position: 'Operations Coordinator', salary: '2,000', totalEmployees: 9 },
-])
+const positionRows = ref<PositionTableRow[]>([])
 
 const positionTableColumns: PositionTableColumn[] = [
     { accessorKey: 'position', header: 'Position' },
@@ -107,51 +150,59 @@ const currentSalaryOptions = computed(() => {
     return [...new Set(positionRows.value.map((row) => row.salary))]
 })
 
-const availableDepartmentHeads = ref<string[]>([
-    'Jayneth Valle',
-    'Joel Kent Lascuna',
-    'Walter Maturan',
-    'Je-ann Callo',
-])
+const addSalaryOptions = computed<SalaryOption[]>(() => {
+    const departmentId = activeDepartment.value?.id
 
-const totalEmployeesByDepartment: Record<string, number> = {
-    'Human Resources': 18,
-    'Information Technology': 42,
-    Finance: 24,
-    Operations: 37,
-}
-
-const totalEmployeesDisplay = computed(() => {
-    const departmentName = activeDepartment.value?.name
-
-    if (!departmentName) {
-        return '-'
+    if (!departmentId) {
+        return []
     }
 
-    return String(totalEmployeesByDepartment[departmentName] ?? '-')
+    const salaryMap = new Map<number, SalaryOption>()
+
+    backendPositions.value
+        .filter((position) => {
+            const positionDepartmentId = position.department_id ?? position.departments?.department_id
+            return positionDepartmentId === departmentId
+        })
+        .forEach((position) => {
+            const salaryId = position.salaries?.salary_id
+            const amount = position.salaries?.amount
+
+            if (!salaryId || amount === undefined || amount === null || amount === '') {
+                return
+            }
+
+            salaryMap.set(salaryId, {
+                salary_id: salaryId,
+                amount: formatSalaryAmount(amount),
+            })
+        })
+
+    return [...salaryMap.values()]
 })
 
-const totalPositionsByDepartment: Record<string, number> = {
-    'Human Resources': 6,
-    'Information Technology': 12,
-    Finance: 4,
-    Operations: 8,
-}
+const totalEmployeesDisplay = computed(() => {
+    if (isDepartmentLoading.value) {
+        return '...'
+    }
+
+    if (!activeDepartment.value) {
+        return '-'
+    }
+
+    return String(positionRows.value.reduce((total, row) => total + row.totalEmployees, 0))
+})
 
 const totalPositionsDisplay = computed(() => {
-    const departmentName = activeDepartment.value?.name
+    if (isDepartmentLoading.value) {
+        return '...'
+    }
 
-    if (!departmentName) {
+    if (!activeDepartment.value) {
         return '-'
     }
 
-    const basePositionCount = totalPositionsByDepartment[departmentName]
-
-    if (typeof basePositionCount !== 'number') {
-        return '-'
-    }
-
-    return String(basePositionCount + addedPositionsCount.value)
+    return String(positionRows.value.length)
 })
 
 const emit = defineEmits<{
@@ -162,86 +213,129 @@ function goBack() {
     emit('back')
 }
 
-function handleUpdateDepartmentHead() {
-    newDepartmentHeadName.value = activeDepartment.value?.head || ''
-    hasDepartmentHeadNameError.value = false
-    hasDepartmentHeadSameError.value = false
-    isConfirmUpdateDepartmentHeadModalOpen.value = false
-    isUpdateDepartmentHeadModalOpen.value = true
+function formatSalaryAmount(amount: string | number | undefined | null) {
+    if (amount === undefined || amount === null || amount === '') {
+        return '-'
+    }
+
+    const numericAmount = typeof amount === 'number' ? amount : Number(amount)
+
+    if (Number.isNaN(numericAmount)) {
+        return String(amount)
+    }
+
+    return new Intl.NumberFormat('en-US', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2,
+    }).format(numericAmount)
 }
 
-function closeUpdateDepartmentHeadModal() {
-    isUpdateDepartmentHeadModalOpen.value = false
+function getBackendErrorMessage(error: unknown, fallbackMessage: string) {
+    if (error instanceof Error && error.message) {
+        return error.message
+    }
+
+    return fallbackMessage
 }
 
-function requestUpdateDepartmentHeadConfirmation() {
-    const trimmedNewHead = newDepartmentHeadName.value.trim()
-    const currentHead = activeDepartment.value?.head || ''
+function showErrorAlert(message: string) {
+    alert(message)
+}
 
-    hasDepartmentHeadNameError.value = !trimmedNewHead
-    hasDepartmentHeadSameError.value = false
+function mapBackendPosition(position: BackendPosition): PositionTableRow {
+    return {
+        positionId: position.position_id,
+        position: position.position_name,
+        salary: formatSalaryAmount(position.salaries?.amount),
+        totalEmployees: position.employees?.length ?? 0,
+    }
+}
 
-    if (hasDepartmentHeadNameError.value) {
+async function loadBackendSalaries() {
+    try {
+        const salariesResp: any = await $fetch('/api/salaries')
+        const salariesPayload = salariesResp?.data ?? salariesResp
+
+        backendSalaries.value = Array.isArray(salariesPayload)
+            ? salariesPayload.map((salary: any) => ({
+                  salary_id: salary.salary_id,
+                  amount: formatSalaryAmount(salary.amount),
+              }))
+            : []
+    } catch {
+        backendSalaries.value = []
+    }
+}
+
+async function loadDepartmentDetails() {
+    const departmentId = activeDepartment.value?.id
+
+    if (!departmentId) {
+        loadedDepartment.value = null
+        positionRows.value = []
         return
     }
 
-    if (trimmedNewHead === currentHead) {
-        hasDepartmentHeadSameError.value = true
-        return
-    }
+    isDepartmentLoading.value = true
 
-    isConfirmUpdateDepartmentHeadModalOpen.value = true
-}
+    try {
+        const [departmentResp, positionsResp]: [any, any] = await Promise.all([
+            $fetch(`/api/departments/${departmentId}`),
+            $fetch('/api/positions'),
+        ])
 
-function closeUpdateDepartmentHeadConfirmationModal() {
-    isConfirmUpdateDepartmentHeadModalOpen.value = false
-}
+        const departmentPayload = departmentResp?.data ?? departmentResp
+        const positionsPayload = positionsResp?.data ?? positionsResp
 
-function saveUpdatedDepartmentHead() {
-    const trimmedNewHead = newDepartmentHeadName.value.trim()
-
-    if (!trimmedNewHead) {
-        return
-    }
-
-    closeUpdateDepartmentHeadConfirmationModal()
-
-    closeUpdateDepartmentHeadModal()
-    isUpdateDepartmentHeadLoadingModalOpen.value = true
-
-    updateDepartmentHeadTimer = setTimeout(() => {
-        if (activeDepartment.value) {
-            activeDepartment.value.head = trimmedNewHead
+        if (departmentPayload?.department_name) {
+            loadedDepartment.value = {
+                id: departmentId,
+                name: departmentPayload.department_name,
+                head: activeDepartment.value?.head || '-',
+            }
         }
 
-        isUpdateDepartmentHeadLoadingModalOpen.value = false
-        isDepartmentHeadUpdatedAlertVisible.value = true
-
-        if (successAlertTimer) {
-            clearTimeout(successAlertTimer)
+        if (Array.isArray(positionsPayload)) {
+            backendPositions.value = positionsPayload
+            positionRows.value = positionsPayload
+                .filter((position: BackendPosition) => {
+                    const positionDepartmentId = position.department_id ?? position.departments?.department_id
+                    return positionDepartmentId === departmentId
+                })
+                .map(mapBackendPosition)
+        } else {
+            backendPositions.value = []
+            positionRows.value = []
         }
-
-        successAlertTimer = setTimeout(() => {
-            isDepartmentHeadUpdatedAlertVisible.value = false
-        }, 2600)
-    }, 1200)
+    } catch (err) {
+        backendPositions.value = []
+        positionRows.value = []
+    } finally {
+        isDepartmentLoading.value = false
+    }
 }
 
-function onUpdate(position: string) {
-    const positionToUpdate = positionRows.value.find((row) => row.position === position)
+function onUpdate(positionId: string) {
+    const numericPositionId = Number(positionId)
+    const positionToUpdate = positionRows.value.find((row) => row.positionId === numericPositionId)
 
     if (!positionToUpdate) {
         return
     }
 
-    selectedUpdatePosition.value = position
+    selectedUpdatePositionId.value = numericPositionId
+    selectedUpdatePosition.value = positionToUpdate.position
     selectedCurrentSalary.value = positionToUpdate.salary
-    newSalaryAmount.value = ''
-    hasCurrentSalaryError.value = false
-    hasNewSalaryAmountError.value = false
-    hasSameSalaryAmountError.value = false
-    hasNewSalaryAmountFormatError.value = false
+    isUpdateNewSalaryOptionChecked.value = false
+    isUpdateCurrentSalaryOptionChecked.value = false
+    updateNewSalaryAmount.value = ''
+    selectedUpdateExistingSalary.value = ''
+    hasUpdateSalaryOptionError.value = false
+    hasUpdateNewSalaryAmountError.value = false
+    hasUpdateNewSalaryAmountFormatError.value = false
+    hasUpdateExistingSalaryError.value = false
     isUpdateSalaryModalOpen.value = true
+    void loadBackendSalaries()
 }
 
 function onDelete(position: string) {
@@ -283,37 +377,108 @@ function closeUpdateSalaryModal() {
     isUpdateSalaryModalOpen.value = false
 }
 
+function onUpdateNewSalaryOptionChange(isChecked: boolean) {
+    isUpdateNewSalaryOptionChecked.value = isChecked
+
+    if (isChecked) {
+        isUpdateCurrentSalaryOptionChecked.value = false
+        selectedUpdateExistingSalary.value = ''
+        hasUpdateSalaryOptionError.value = false
+        hasUpdateExistingSalaryError.value = false
+    } else {
+        hasUpdateNewSalaryAmountFormatError.value = false
+    }
+}
+
+function onUpdateCurrentSalaryOptionChange(isChecked: boolean) {
+    isUpdateCurrentSalaryOptionChecked.value = isChecked
+
+    if (isChecked) {
+        isUpdateNewSalaryOptionChecked.value = false
+        updateNewSalaryAmount.value = ''
+        hasUpdateSalaryOptionError.value = false
+        hasUpdateNewSalaryAmountError.value = false
+        hasUpdateNewSalaryAmountFormatError.value = false
+    }
+}
+
 function isSalaryAmountNumeric(value: string) {
     const normalizedValue = value.trim().replaceAll(',', '')
     return /^\d+(\.\d+)?$/.test(normalizedValue)
 }
 
-function saveUpdatedSalary() {
-    const normalizedNewSalaryAmount = newSalaryAmount.value.trim()
-    const normalizedCurrentSalaryAmount = selectedCurrentSalary.value.trim()
+async function saveUpdatedSalary() {
+    hasUpdateSalaryOptionError.value = !isUpdateNewSalaryOptionChecked.value && !isUpdateCurrentSalaryOptionChecked.value
+    hasUpdateNewSalaryAmountError.value = isUpdateNewSalaryOptionChecked.value && !updateNewSalaryAmount.value.trim()
+    hasUpdateNewSalaryAmountFormatError.value = isUpdateNewSalaryOptionChecked.value && Boolean(updateNewSalaryAmount.value.trim()) && !isSalaryAmountNumeric(updateNewSalaryAmount.value)
+    hasUpdateNewSalaryDuplicateError.value = false
+    hasUpdateExistingSalaryError.value = isUpdateCurrentSalaryOptionChecked.value && !selectedUpdateExistingSalary.value
 
-    hasCurrentSalaryError.value = false
-    hasNewSalaryAmountError.value = !normalizedNewSalaryAmount
-    hasSameSalaryAmountError.value = Boolean(normalizedNewSalaryAmount) && normalizedNewSalaryAmount === normalizedCurrentSalaryAmount
-    hasNewSalaryAmountFormatError.value = false
+    const normalizedSalaryAmount = updateNewSalaryAmount.value.trim().replaceAll(',', '')
+    const isDuplicateSalary = isUpdateNewSalaryOptionChecked.value && Boolean(normalizedSalaryAmount) && backendSalaries.value.some((salary) => String(salary.amount).trim().replaceAll(',', '') === normalizedSalaryAmount)
 
-    if (hasNewSalaryAmountError.value || hasSameSalaryAmountError.value) {
+    if (isDuplicateSalary) {
+        hasUpdateNewSalaryDuplicateError.value = true
+    }
+
+    if (
+        hasUpdateSalaryOptionError.value ||
+        hasUpdateNewSalaryAmountError.value ||
+        hasUpdateNewSalaryAmountFormatError.value ||
+        hasUpdateNewSalaryDuplicateError.value ||
+        hasUpdateExistingSalaryError.value
+    ) {
         return
     }
 
-    const rowToUpdate = positionRows.value.find((row) => row.position === selectedUpdatePosition.value)
+    const positionId = selectedUpdatePositionId.value
 
-    if (!rowToUpdate) {
+    if (!positionId) {
+        showErrorAlert('Unable to update salary: missing position identifier.')
         return
     }
 
     closeUpdateSalaryModal()
     isUpdateSalaryLoadingModalOpen.value = true
 
-    updateSalaryTimer = setTimeout(() => {
-        rowToUpdate.salary = normalizedNewSalaryAmount
+    try {
+        const transactedBy = transactedById.value
 
-        isUpdateSalaryLoadingModalOpen.value = false
+        if (!transactedBy) {
+            throw new Error('You must be signed in to update salary.')
+        }
+
+        let salaryId: number | null = null
+
+        if (isUpdateNewSalaryOptionChecked.value) {
+            const salaryAmount = updateNewSalaryAmount.value.trim().replaceAll(',', '')
+            const response: any = await $fetch('/api/salaries', {
+                method: 'POST',
+                body: {
+                    amount: salaryAmount,
+                    transacted_by: transactedBy,
+                },
+            })
+            const payload = response?.data ?? response
+            salaryId = payload?.salary_id ?? null
+
+            if (!salaryId) {
+                throw new Error('Failed to create new salary record.')
+            }
+        } else {
+            salaryId = Number(selectedUpdateExistingSalary.value)
+        }
+
+        await $fetch(`/api/positions/${positionId}`, {
+            method: 'PUT',
+            body: {
+                salary_id: salaryId,
+                transacted_by: transactedBy,
+            },
+        })
+
+        await loadDepartmentDetails()
+
         isSalaryUpdatedAlertVisible.value = true
 
         if (successAlertTimer) {
@@ -323,7 +488,11 @@ function saveUpdatedSalary() {
         successAlertTimer = setTimeout(() => {
             isSalaryUpdatedAlertVisible.value = false
         }, 2600)
-    }, 1200)
+    } catch (err) {
+        showErrorAlert(getBackendErrorMessage(err, 'Failed to update salary.'))
+    } finally {
+        isUpdateSalaryLoadingModalOpen.value = false
+    }
 }
 
 function handleAddPosition() {
@@ -399,11 +568,13 @@ function closeAddPositionConfirmationModal() {
 
 function addPosition() {
     const normalizedPositionName = newPositionName.value.trim()
-    const resolvedSalary = isNewSalaryOptionChecked.value
-        ? addNewSalaryAmount.value.trim()
-        : selectedCurrentSalaryForAdd.value
+    const departmentId = activeDepartment.value?.id
+    const normalizedSalaryAmount = addNewSalaryAmount.value.trim().replaceAll(',', '')
+    const selectedSalaryOption = addSalaryOptions.value.find(
+        (salaryOption) => String(salaryOption.salary_id) === selectedCurrentSalaryForAdd.value,
+    )
 
-    if (!normalizedPositionName || !resolvedSalary) {
+    if (!normalizedPositionName || !departmentId) {
         return
     }
 
@@ -422,26 +593,51 @@ function addPosition() {
     closeAddPositionConfirmationModal()
     isAddPositionLoadingModalOpen.value = true
 
-    addPositionTimer = setTimeout(() => {
-        positionRows.value.push({
-            position: normalizedPositionName,
-            salary: resolvedSalary,
-            totalEmployees: 0,
-        })
-
-        addedPositionsCount.value += 1
-
-        isAddPositionLoadingModalOpen.value = false
-        isPositionAddedAlertVisible.value = true
-        closeAddPositionModal()
-
-        if (successAlertTimer) {
-            clearTimeout(successAlertTimer)
+    addPositionTimer = setTimeout(async () => {
+        if (!transactedById.value) {
+            isAddPositionLoadingModalOpen.value = false
+            showErrorAlert('You must be signed in to create a position')
+            return
         }
 
-        successAlertTimer = setTimeout(() => {
-            isPositionAddedAlertVisible.value = false
-        }, 2600)
+        try {
+            await $fetch('/api/positions', {
+                method: 'POST',
+                body: isNewSalaryOptionChecked.value
+                    ? {
+                        department_id: departmentId,
+                        position_name: normalizedPositionName,
+                        salary_type: 'new',
+                        salary_amount: normalizedSalaryAmount,
+                        transacted_by: transactedById.value,
+                    }
+                    : {
+                        department_id: departmentId,
+                        position_name: normalizedPositionName,
+                        salary_type: 'existing',
+                        salary_id: selectedSalaryOption?.salary_id,
+                        transacted_by: transactedById.value,
+                    },
+            })
+
+            await loadDepartmentDetails()
+
+            isPositionAddedAlertVisible.value = true
+
+            if (successAlertTimer) {
+                clearTimeout(successAlertTimer)
+            }
+
+            successAlertTimer = setTimeout(() => {
+                isPositionAddedAlertVisible.value = false
+            }, 2600)
+
+            closeAddPositionModal()
+        } catch (err) {
+            showErrorAlert(getBackendErrorMessage(err, 'Failed to create position'))
+        } finally {
+            isAddPositionLoadingModalOpen.value = false
+        }
     }, 1200)
 }
 
@@ -465,25 +661,27 @@ watch(selectedCurrentSalaryForAdd, (value) => {
     }
 })
 
-watch(selectedCurrentSalary, (value) => {
-    if (value) {
-        hasCurrentSalaryError.value = false
-    }
-})
-
-watch(newSalaryAmount, (value) => {
+watch(updateNewSalaryAmount, (value) => {
     const normalizedValue = value.trim()
 
-    hasNewSalaryAmountError.value = false
-    hasSameSalaryAmountError.value = Boolean(normalizedValue) && normalizedValue === selectedCurrentSalary.value.trim()
+    hasUpdateNewSalaryAmountError.value = false
+    hasUpdateNewSalaryAmountFormatError.value = Boolean(normalizedValue) && !isSalaryAmountNumeric(normalizedValue)
+    hasUpdateNewSalaryDuplicateError.value = false
 })
 
-watch(newDepartmentHeadName, (value) => {
-    if (value.trim()) {
-        hasDepartmentHeadNameError.value = false
-        hasDepartmentHeadSameError.value = false
+watch(selectedUpdateExistingSalary, (value) => {
+    if (value) {
+        hasUpdateExistingSalaryError.value = false
     }
 })
+
+watch(
+    () => activeDepartment.value?.id,
+    () => {
+        void loadDepartmentDetails()
+    },
+    { immediate: true },
+)
 
 onUnmounted(() => {
     if (addPositionTimer) {
@@ -496,10 +694,6 @@ onUnmounted(() => {
 
     if (deletePositionTimer) {
         clearTimeout(deletePositionTimer)
-    }
-
-    if (updateDepartmentHeadTimer) {
-        clearTimeout(updateDepartmentHeadTimer)
     }
 
     if (successAlertTimer) {
@@ -531,13 +725,6 @@ onUnmounted(() => {
                 title="Successfully updated"
                 message="Salary has been updated."
             />
-
-            <Alert
-                v-model:visible="isDepartmentHeadUpdatedAlertVisible"
-                variant="success"
-                title="Successfully updated"
-                message="Department head has been updated."
-            />
         </div>
 
         <div class="department-info-header">
@@ -565,15 +752,6 @@ onUnmounted(() => {
                         <p class="department-detail-label">Department Head</p>
                         <div class="department-head-value-wrap">
                             <p class="department-detail-value">{{ activeDepartment?.head || '-' }}</p>
-                            <button
-                                type="button"
-                                class="update-department-head-button"
-                                aria-label="Update department head"
-                                title="Update"
-                                @click="handleUpdateDepartmentHead"
-                            >
-                                <PencilSquareIcon class="update-icon" />
-                            </button>
                         </div>
                     </div>
                 </div>
@@ -606,6 +784,7 @@ onUnmounted(() => {
                 size="sm"
                 placeholder="Search department"
                 aria-label="Search department"
+                class="search-input"
             >
                 <template #icon>
                     <MagnifyingGlassIcon class="search-icon" />
@@ -631,7 +810,7 @@ onUnmounted(() => {
                         <button
                             type="button"
                             class="table-action-button update"
-                            @click="onUpdate(String(row.original.position))"
+                            @click="onUpdate(String(row.original.positionId))"
                             aria-label="Update position"
                             title="Update"
                         >
@@ -675,25 +854,55 @@ onUnmounted(() => {
             <div class="modal-form-field">
                 <p class="update-position-text">Position: {{ selectedUpdatePosition }}</p>
 
-
                 <label class="modal-field-label" for="current-salary">Current Salary</label>
                 <div class="current-salary-display">{{ selectedCurrentSalary || '-' }}</div>
 
-                <label class="modal-field-label" for="new-salary-amount">New Salary Amount</label>
-                <select
-                    id="new-salary-amount"
-                    v-model="newSalaryAmount"
-                    class="modal-select"
-                    :aria-invalid="hasNewSalaryAmountError || hasSameSalaryAmountError ? 'true' : 'false'"
-                    :style="hasNewSalaryAmountError || hasSameSalaryAmountError ? { borderColor: '#ef4444', boxShadow: '0 0 0 3px rgba(239, 68, 68, 0.14)' } : undefined"
-                >
-                    <option value="">Select new salary amount</option>
-                    <option v-for="salaryOption in currentSalaryOptions" :key="salaryOption" :value="salaryOption">
-                        {{ salaryOption }}
-                    </option>
-                </select>
-                <p v-if="hasNewSalaryAmountError" class="modal-field-error">Please select new salary amount</p>
-                <p v-else-if="hasSameSalaryAmountError" class="modal-field-error">New salary amount must be different from current salary</p>
+                <div class="salary-option-grid" role="group" aria-label="Update salary selection">
+                    <CheckBox
+                        v-model="isUpdateNewSalaryOptionChecked"
+                        id="update-salary-new-option"
+                        label="New Salary Amount"
+                        @change="onUpdateNewSalaryOptionChange"
+                    />
+                    <CheckBox
+                        v-model="isUpdateCurrentSalaryOptionChecked"
+                        id="update-salary-existing-option"
+                        label="Existing Salary Amount"
+                        @change="onUpdateCurrentSalaryOptionChange"
+                    />
+                </div>
+                <p v-if="hasUpdateSalaryOptionError" class="modal-field-error">Please choose a salary update option</p>
+
+                <div v-if="isUpdateNewSalaryOptionChecked" class="modal-form-field">
+                    <label class="modal-field-label" for="update-new-salary-amount">New Salary Amount</label>
+                    <Input
+                        id="update-new-salary-amount"
+                        v-model="updateNewSalaryAmount"
+                        placeholder="Enter new salary amount"
+                        :aria-invalid="hasUpdateNewSalaryAmountError || hasUpdateNewSalaryAmountFormatError || hasUpdateNewSalaryDuplicateError ? 'true' : 'false'"
+                        :style="hasUpdateNewSalaryAmountError || hasUpdateNewSalaryAmountFormatError || hasUpdateNewSalaryDuplicateError ? { borderColor: '#ef4444', boxShadow: '0 0 0 3px rgba(239, 68, 68, 0.14)' } : undefined"
+                    />
+                    <p v-if="hasUpdateNewSalaryAmountError" class="modal-field-error">Please enter new salary amount</p>
+                    <p v-else-if="hasUpdateNewSalaryAmountFormatError" class="modal-field-error">Salary amount must be a valid number</p>
+                    <p v-else-if="hasUpdateNewSalaryDuplicateError" class="modal-field-error">This salary amount already exists. Use existing salary option instead.</p>
+                </div>
+
+                <div v-if="isUpdateCurrentSalaryOptionChecked" class="modal-form-field">
+                    <label class="modal-field-label" for="update-existing-salary-amount">Existing Salary Amount</label>
+                    <select
+                        id="update-existing-salary-amount"
+                        v-model="selectedUpdateExistingSalary"
+                        class="modal-select"
+                        :aria-invalid="hasUpdateExistingSalaryError ? 'true' : 'false'"
+                        :style="hasUpdateExistingSalaryError ? { borderColor: '#ef4444', boxShadow: '0 0 0 3px rgba(239, 68, 68, 0.14)' } : undefined"
+                    >
+                        <option value="">Select existing salary amount</option>
+                        <option v-for="salaryOption in backendSalaries" :key="salaryOption.salary_id" :value="String(salaryOption.salary_id)">
+                            {{ salaryOption.amount }}
+                        </option>
+                    </select>
+                    <p v-if="hasUpdateExistingSalaryError" class="modal-field-error">Please select existing salary amount</p>
+                </div>
             </div>
 
             <template #footer>
@@ -776,8 +985,8 @@ onUnmounted(() => {
                         :style="hasAddCurrentSalaryError ? { borderColor: '#ef4444', boxShadow: '0 0 0 3px rgba(239, 68, 68, 0.14)' } : undefined"
                     >
                         <option value="">Select current salary amount</option>
-                        <option v-for="salaryOption in currentSalaryOptions" :key="`add-${salaryOption}`" :value="salaryOption">
-                            {{ salaryOption }}
+                        <option v-for="salaryOption in addSalaryOptions" :key="`add-${salaryOption.salary_id}`" :value="String(salaryOption.salary_id)">
+                            {{ salaryOption.amount }}
                         </option>
                     </select>
                     <p v-if="hasAddCurrentSalaryError" class="modal-field-error">Please select current salary amount</p>
@@ -905,94 +1114,6 @@ onUnmounted(() => {
             </div>
         </Modal>
 
-        <Modal
-            v-model:open="isUpdateDepartmentHeadModalOpen"
-            hide-trigger
-            :dismissible="false"
-            title="Update Department Head"
-        >
-            <template #header>
-                <h3 class="modal-title">Update Department Head</h3>
-            </template>
-
-            <div class="modal-form-field">
-                <label class="modal-field-label" for="new-department-head-name">Department Head Name</label>
-                <select
-                    id="new-department-head-name"
-                    v-model="newDepartmentHeadName"
-                    class="modal-select"
-                    :aria-invalid="hasDepartmentHeadNameError || hasDepartmentHeadSameError ? 'true' : 'false'"
-                    :style="hasDepartmentHeadNameError || hasDepartmentHeadSameError ? { borderColor: '#ef4444', boxShadow: '0 0 0 3px rgba(239, 68, 68, 0.14)' } : undefined"
-                >
-                    <option value="">Select department head</option>
-                    <option v-for="head in availableDepartmentHeads" :key="head" :value="head">
-                        {{ head }}
-                    </option>
-                </select>
-                <p v-if="hasDepartmentHeadNameError" class="modal-field-error">Please select a department head</p>
-                <p v-else-if="hasDepartmentHeadSameError" class="modal-field-error">Department head is already the same</p>
-            </div>
-
-            <template #footer>
-                <Button
-                    type="button"
-                    variant="subtle"
-                    class="modal-footer-button modal-footer-button--red"
-                    @click="closeUpdateDepartmentHeadModal"
-                >
-                    Cancel
-                </Button>
-                <Button
-                    type="button"
-                    variant="subtle"
-                    class="modal-footer-button modal-footer-button--blue"
-                    @click="requestUpdateDepartmentHeadConfirmation"
-                >
-                    Save
-                </Button>
-            </template>
-        </Modal>
-
-        <Modal
-            v-model:open="isConfirmUpdateDepartmentHeadModalOpen"
-            hide-trigger
-            :dismissible="false"
-            title="Confirm Department Head"
-        >
-            <p class="confirm-modal-text">Are you sure you want to replace department head?</p>
-
-            <template #footer>
-                <Button
-                    type="button"
-                    variant="subtle"
-                    class="modal-footer-button modal-footer-button--red"
-                    @click="closeUpdateDepartmentHeadConfirmationModal"
-                >
-                    No
-                </Button>
-                <Button
-                    type="button"
-                    variant="subtle"
-                    class="modal-footer-button modal-footer-button--blue"
-                    @click="saveUpdatedDepartmentHead"
-                >
-                    Yes
-                </Button>
-            </template>
-        </Modal>
-
-        <Modal
-            v-model:open="isUpdateDepartmentHeadLoadingModalOpen"
-            hide-trigger
-            :dismissible="false"
-            :show-footer="false"
-            title=""
-        >
-            <div class="loading-modal-content" role="status" aria-live="polite">
-                <span class="table-spinner" aria-hidden="true"></span>
-                <p class="updating-department-head-text">Updating department head</p>
-            </div>
-        </Modal>
     </div>
 </template>
 
@@ -1189,13 +1310,6 @@ onUnmounted(() => {
     color: #334155;
 }
 
-.updating-department-head-text {
-    margin: 0;
-    font-size: 0.95rem;
-    font-weight: 200;
-    color: #334155;
-}
-
 .deleting-position-text {
     margin: 0;
     font-size: 0.95rem;
@@ -1308,31 +1422,6 @@ onUnmounted(() => {
     justify-content: center;
 }
 
-.update-department-head-button {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 28px;
-    height: 28px;
-    border-radius: 8px;
-    border: 1px solid #dbeafe;
-    background: #eff6ff;
-    color: #1d4ed8;
-    cursor: pointer;
-    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
-}
-
-.update-department-head-button:hover {
-    background: #dbeafe;
-    border-color: #93c5fd;
-}
-
-.update-icon {
-    width: 14px;
-    height: 14px;
-    flex-shrink: 0;
-}
-
 .department-detail-label {
     margin: 0;
     font-size: 0.8rem;
@@ -1342,7 +1431,7 @@ onUnmounted(() => {
 
 .department-detail-value {
     margin: 0;
-    font-size: 0.95rem;
+    font-size: 0.75rem;
     color: #1f2937;
     overflow-wrap: anywhere;
 }
@@ -1471,10 +1560,6 @@ onUnmounted(() => {
         grid-template-columns: 1fr;
     }
 
-    .department-overview-column {
-        gap: 0.75rem;
-    }
-
     .department-info-card {
         padding: 0.9rem 0.95rem;
     }
@@ -1495,5 +1580,12 @@ onUnmounted(() => {
         grid-template-columns: 1fr;
         gap: 0.5rem;
     }
+
+    .department-search {
+        flex-direction: column;
+        width: 220px;
+    }
+
+
 }
 </style>

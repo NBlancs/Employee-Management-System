@@ -34,6 +34,14 @@ type EmployeeDirectoryRecord = {
     cardNumber: string
 }
 
+type CreatedEmployeePayload = {
+    id: number
+    name: string
+    department: string
+    cardStatus: 'Has Card' | 'No Card'
+    cardNumber: string
+}
+
 const currentView = ref<'list' | 'new' | 'info'>('list')
 const showSuccessAlert = ref(false)
 const selectedEmployeeId = ref<number | null>(null)
@@ -144,10 +152,21 @@ watch(sharedEmployeeRows, (rows) => {
     })
 }, { immediate: true, deep: true })
 
+function formatEmployeeDisplayName(employee: EmployeeDirectoryRecord) {
+    const firstNameTokens = employee.firstName.trim().split(/\s+/)
+    const firstName = firstNameTokens[0] || ''
+    const lastName = employee.lastName.trim() || ''
+    const suffix = employee.suffix.trim() ? ` ${employee.suffix.trim()}` : ''
+    const middleNameTrimmed = employee.middleName.trim()
+    const middleInitial = middleNameTrimmed ? `${middleNameTrimmed.charAt(0).toUpperCase()}.` : ''
+
+    return `${lastName}, ${firstName}${suffix}${middleInitial ? `, ${middleInitial}` : ''}`
+}
+
 const employeeRows = computed(() => {
     return employeeDirectory.value.map(employee => ({
         id: employee.id,
-        name: `${employee.lastName}, ${employee.firstName}`,
+        name: formatEmployeeDisplayName(employee),
         cardStatus: employee.cardStatus,
         department: employee.department,
         cardNumber: employee.cardNumber,
@@ -169,7 +188,46 @@ function openEmployeeInfo(employeeId: number) {
     currentView.value = 'info'
 }
 
-function onEmployeeCreated() {
+function onEmployeeCreated(payload: CreatedEmployeePayload) {
+    const [lastName = '', firstNameRaw = ''] = payload.name.split(',')
+    const firstName = firstNameRaw.trim().split(' ')[0] ?? ''
+
+    employeeDirectory.value = [
+        ...employeeDirectory.value,
+        {
+            id: payload.id,
+            department: payload.department,
+            position: '',
+            salary: 0,
+            firstName,
+            middleName: '',
+            lastName: lastName.trim(),
+            suffix: '',
+            gender: '',
+            birthdate: '',
+            age: 0,
+            province: '',
+            city: '',
+            barangay: '',
+            zipCode: '',
+            contactNumber: '',
+            username: '',
+            cardStatus: payload.cardStatus,
+            cardNumber: payload.cardNumber,
+        },
+    ]
+
+    sharedEmployeeRows.value = [
+        ...sharedEmployeeRows.value,
+        {
+            id: payload.id,
+            name: payload.name,
+            cardStatus: payload.cardStatus,
+            department: payload.department,
+            cardNumber: payload.cardNumber,
+        },
+    ]
+
     showSuccessAlert.value = true
     setTimeout(() => {
         showSuccessAlert.value = false

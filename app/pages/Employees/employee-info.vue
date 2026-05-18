@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed, onUnmounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { ArrowLeftIcon, PencilSquareIcon, XMarkIcon } from '@heroicons/vue/24/outline'
 import Alert from '~/components/Alert.vue'
 import Modal from '~/components/Modal.vue'
+import Input from '~/components/Input.vue'
 
 const props = defineProps<{
     employeeId: number | null
@@ -14,6 +15,10 @@ type EmployeeInfoRecord = {
   department: string
   position: string
   salary: number
+  morningShiftStart?: string
+  morningShiftEnd?: string
+  afternoonShiftStart?: string
+  afternoonShiftEnd?: string
   shiftStart?: string
   shiftEnd?: string
   firstName: string
@@ -41,119 +46,193 @@ type EmployeeTableRow = {
   cardNumber: string
 }
 
-const defaultEmployeeDirectory: [EmployeeInfoRecord, ...EmployeeInfoRecord[]] = [
-  {
-    id: 1,
-    department: 'IT',
-    position: 'Senior',
-    salary: 48000,
-    shiftStart: '08:00 AM',
-    shiftEnd: '05:00 PM',
-    firstName: 'Joel Kent',
-    middleName: '',
-    lastName: 'Lascuna',
-    suffix: '',
-    gender: 'Male',
-    birthdate: '1995-06-18',
-    age: 30,
-    province: 'Cebu',
-    city: 'Cebu City',
-    barangay: 'Lahug',
-    zipCode: '6000',
-    contactNumber: '09171234567',
-    username: 'joel.kent',
-    cardStatus: 'Has Card',
-    cardNumber: 'IDC-IT-1001',
-  },
-  {
-    id: 2,
-    department: 'HR',
-    position: 'Manager',
-    salary: 52000,
-    shiftStart: '09:00 AM',
-    shiftEnd: '06:00 PM',
-    firstName: 'Jayneth',
-    middleName: '',
-    lastName: 'Valle',
-    suffix: '',
-    gender: 'Female',
-    birthdate: '1993-03-09',
-    age: 33,
-    province: 'Bohol',
-    city: 'Tagbilaran',
-    barangay: 'Cogon',
-    zipCode: '6300',
-    contactNumber: '09172345678',
-    username: 'jayneth.valle',
-    cardStatus: 'Has Card',
-    cardNumber: 'IDC-HR-1002',
-  },
-  {
-    id: 3,
-    department: 'Finance',
-    position: 'Junior',
-    salary: 28000,
-    shiftStart: '08:30 AM',
-    shiftEnd: '05:30 PM',
-    firstName: 'Walter',
-    middleName: '',
-    lastName: 'Maturan',
-    suffix: '',
-    gender: 'Male',
-    birthdate: '1998-11-23',
-    age: 27,
-    province: 'Leyte',
-    city: 'Tacloban',
-    barangay: 'Sagkahan',
-    zipCode: '6500',
-    contactNumber: '09173456789',
-    username: 'walter.maturan',
-    cardStatus: 'No Card',
-    cardNumber: '',
-  },
-  {
-    id: 4,
-    department: 'IT',
-    position: 'Intern',
-    salary: 18000,
-    shiftStart: '08:00 AM',
-    shiftEnd: '05:00 PM',
-    firstName: 'Je-ann',
-    middleName: '',
-    lastName: 'Callo',
-    suffix: '',
-    gender: 'Female',
-    birthdate: '2002-01-12',
-    age: 24,
-    province: 'Cebu',
-    city: 'Mandaue',
-    barangay: 'Banilad',
-    zipCode: '6014',
-    contactNumber: '09174567890',
-    username: 'jeann.callo',
-    cardStatus: 'Has Card',
-    cardNumber: 'IDC-IT-1004',
-  },
-]
+type PositionUpdateOption = {
+  position_id: number
+  position_name: string
+  department_id: number
+  department_name?: string
+}
 
-const sharedEmployeeRows = useState<EmployeeTableRow[]>('employees-table-rows', () => {
-  return defaultEmployeeDirectory.map(employee => ({
-    id: employee.id,
-    name: `${employee.lastName}, ${employee.firstName}`,
-    cardStatus: employee.cardStatus,
-    department: employee.department,
-    cardNumber: employee.cardNumber,
-  }))
+type DepartmentUpdateOption = {
+  department_id: number
+  department_name: string
+  positions?: PositionUpdateOption[]
+}
+
+type LoggedInUser = {
+  employeeId: number
+  accountId: number
+  username: string
+  firstName: string
+  middleName: string
+  lastName: string
+  suffix: string
+  displayName: string
+  role: string
+  department: string
+}
+
+const sharedEmployeeRows = useState<EmployeeTableRow[]>('employees-table-rows', () => [])
+const userCookie = useCookie<string | null>('ems_user')
+
+const loadedEmployee = ref<EmployeeInfoRecord | null>(null)
+const departments = ref<DepartmentUpdateOption[]>([])
+const currentUser = computed<LoggedInUser | null>(() => {
+  if (!userCookie.value) {
+    return null
+  }
+
+  try {
+    return JSON.parse(userCookie.value) as LoggedInUser
+  } catch {
+    return null
+  }
+})
+const transactedById = computed(() => currentUser.value?.employeeId ?? null)
+
+const availableDepartmentPositions = computed(() => {
+  const selectedDepartmentId = Number(selectedDepartmentUpdate.value)
+
+  if (!selectedDepartmentId) {
+    return []
+  }
+
+  return departments.value.find(department => department.department_id === selectedDepartmentId)?.positions ?? []
 })
 
+const availablePositions = computed(() => {
+  return departments.value.flatMap(department => {
+    return (department.positions ?? []).map(position => ({
+      ...position,
+      department_name: department.department_name,
+    }))
+  })
+})
+
+const mapBackendEmployee = (raw: any): EmployeeInfoRecord => {
+  const info = raw.user_informations ?? {}
+  const position = raw.positions ?? {}
+  const department = position.departments ?? {}
+  const salary = position.salaries ?? {}
+  const card = raw.cards ?? null
+  const morningWorkHour = raw.morning_work_hour ?? {}
+  const afternoonWorkHour = raw.afternoon_work_hour ?? {}
+  
+  const birthdate = info.birthdate ? new Date(info.birthdate) : null
+  const age = birthdate ? Math.floor((new Date().getTime() - birthdate.getTime()) / (365.25 * 24 * 60 * 60 * 1000)) : 0
+  
+  // Convert time to 12-hour format with AM/PM
+  const formatTime12hr = (timeStr: string | undefined): string => {
+    if (!timeStr || typeof timeStr !== 'string' || timeStr.trim() === '') return ''
+    const parts = timeStr.split(':')
+    const hoursStr = parts[0] || ''
+    const minutesStr = parts[1] || '00'
+    const hour = parseInt(hoursStr, 10)
+    if (isNaN(hour)) return ''
+    const period = hour >= 12 ? 'PM' : 'AM'
+    const displayHour = hour % 12 || 12
+    return `${displayHour}:${minutesStr} ${period}`
+  }
+  
+  // Format date to show only date (YYYY-MM-DD)
+  const formatDateOnly = (dateStr: string | undefined): string => {
+    if (!dateStr || typeof dateStr !== 'string' || dateStr.trim() === '') return ''
+    const datePart = dateStr.split('T')[0] || ''
+    return datePart
+  }
+  
+  return {
+    id: raw.employee_id,
+    department: department.department_name ?? '',
+    position: position.position_name ?? '',
+    salary: salary.amount ? Number(salary.amount) : 0,
+    morningShiftStart: formatTime12hr(morningWorkHour.time_in ?? ''),
+    morningShiftEnd: formatTime12hr(morningWorkHour.time_out ?? ''),
+    afternoonShiftStart: formatTime12hr(afternoonWorkHour.time_in ?? ''),
+    afternoonShiftEnd: formatTime12hr(afternoonWorkHour.time_out ?? ''),
+    shiftStart: formatTime12hr(morningWorkHour.time_in ?? ''),
+    shiftEnd: formatTime12hr(morningWorkHour.time_out ?? ''),
+    firstName: info.first_name ?? '',
+    middleName: info.middle_name ?? '',
+    lastName: info.last_name ?? '',
+    suffix: info.suffix ?? '',
+    gender: info.gender ?? '',
+    birthdate: formatDateOnly(info.birthdate ?? ''),
+    age,
+    province: info.province ?? '',
+    city: info.city ?? '',
+    barangay: info.barangay ?? '',
+    zipCode: info.zip_code ?? '',
+    contactNumber: info.contact_number ?? '',
+    username: raw.user_accounts?.username ?? '',
+    cardStatus: card?.card_number ? 'Has Card' : 'No Card',
+    cardNumber: card?.card_number ?? '',
+  }
+}
+
 const employee = computed(() => {
-  const directory = (
-    props.employees && props.employees.length > 0
-      ? props.employees
-      : defaultEmployeeDirectory
-  ) as [EmployeeInfoRecord, ...EmployeeInfoRecord[]]
-  const foundEmployee = directory.find(item => item.id === props.employeeId)
-  return foundEmployee ?? directory[0]
+  if (loadedEmployee.value) {
+    return loadedEmployee.value
+  }
+  
+  if (props.employees && props.employees.length > 0 && props.employeeId) {
+    const found = props.employees.find(item => item.id === props.employeeId)
+    if (found) return found
+  }
+  
+  // Return empty/default employee if not found
+  return {
+    id: 0,
+    department: '',
+    position: '',
+    salary: 0,
+    morningShiftStart: '',
+    morningShiftEnd: '',
+    afternoonShiftStart: '',
+    afternoonShiftEnd: '',
+    shiftStart: '',
+    shiftEnd: '',
+    firstName: '',
+    middleName: '',
+    lastName: '',
+    suffix: '',
+    gender: '',
+    birthdate: '',
+    age: 0,
+    province: '',
+    city: '',
+    barangay: '',
+    zipCode: '',
+    contactNumber: '',
+    username: '',
+    cardStatus: 'No Card',
+    cardNumber: '',
+  } as EmployeeInfoRecord
+})
+
+const workHours = ref<WorkHourOption[]>([])
+
+type WorkHourOption = {
+    work_hour_id: number
+    time_in: string
+    time_out: string
+    lunch_break_minutes?: number
+}
+
+const availableShiftTimes = computed(() => {
+    return Array.from(new Set(workHours.value.map(workHour => formatTwentyFourHourToMeridiem(workHour.time_in))))
+})
+
+const availableMorningShiftTimes = computed(() => {
+    return availableShiftTimes.value.filter(time => {
+        return time.trim().toUpperCase().endsWith('AM')
+    })
+})
+
+const availableAfternoonShiftTimes = computed(() => {
+    return availableShiftTimes.value.filter(time => {
+        return time.trim().toUpperCase().endsWith('PM')
+    })
 })
 
 const showUpdateModal = ref(false)
@@ -175,6 +254,10 @@ const selectedDepartmentPositionUpdate = ref('')
 const selectedPositionUpdate = ref('')
 const selectedShiftStartUpdate = ref('')
 const selectedShiftEndUpdate = ref('')
+const selectedMorningTimeInUpdate = ref('')
+const selectedMorningTimeOutUpdate = ref('')
+const selectedAfternoonTimeInUpdate = ref('')
+const selectedAfternoonTimeOutUpdate = ref('')
 const selectedPasswordUpdate = ref('')
 const scannedRfidNumber = ref('')
 const pendingCardUpdate = ref<{ employeeId: number; cardStatus: 'Has Card' | 'No Card'; cardNumber: string } | null>(null)
@@ -201,6 +284,10 @@ watch(showUpdateModal, (isOpen) => {
     selectedPositionUpdate.value = ''
     selectedShiftStartUpdate.value = ''
     selectedShiftEndUpdate.value = ''
+    selectedMorningTimeInUpdate.value = ''
+    selectedMorningTimeOutUpdate.value = ''
+    selectedAfternoonTimeInUpdate.value = ''
+    selectedAfternoonTimeOutUpdate.value = ''
     selectedPasswordUpdate.value = ''
   }
 })
@@ -266,6 +353,18 @@ watch(showScannerRegisterModal, (isOpen) => {
   }
 })
 
+watch(selectedDepartmentUpdate, () => {
+  selectedDepartmentPositionUpdate.value = ''
+})
+
+watch(() => selectedMorningTimeInUpdate.value, () => {
+  selectedMorningTimeOutUpdate.value = getTimeOutForTimeIn(selectedMorningTimeInUpdate.value)
+})
+
+watch(() => selectedAfternoonTimeInUpdate.value, () => {
+  selectedAfternoonTimeOutUpdate.value = getTimeOutForTimeIn(selectedAfternoonTimeInUpdate.value)
+})
+
 const emit = defineEmits<{
     back: []
   updateCardStatus: [payload: { employeeId: number; cardStatus: 'Has Card' | 'No Card'; cardNumber: string }]
@@ -275,7 +374,130 @@ function goBack() {
     emit('back')
 }
 
+async function loadDepartments() {
+  try {
+    const resp: any = await $fetch('/api/departments')
+    const payload = resp?.data ?? resp
+
+    if (Array.isArray(payload)) {
+      departments.value = payload
+    }
+  } catch (err) {
+    console.error('Failed to load departments for update modal:', err)
+  }
+}
+
+onMounted(async () => {
+  await loadDepartments()
+})
+
+watch(() => props.employeeId, async (id) => {
+  if (!id) {
+    loadedEmployee.value = null
+    return
+  }
+  
+  try {
+    const resp: any = await $fetch(`/api/employees/${id}`)
+    const payload = resp?.data ?? resp
+    if (payload) {
+      // Use payload.raw which contains the full nested backend structure
+      const rawEmployee = payload.raw ?? payload
+      loadedEmployee.value = mapBackendEmployee(rawEmployee)
+    }
+  } catch (err) {
+    // ignore and use props fallback
+  }
+}, { immediate: true })
+
+function isAdminUser() {
+  return currentUser.value?.role?.trim().toLowerCase() === 'admin'
+}
+
+function ensureAdminPermission() {
+  if (!isAdminUser()) {
+    showErrorAlert('You dont have a permission to update')
+    return false
+  }
+
+  return true
+}
+
+function formatTwentyFourHourToMeridiem(value: string) {
+    const match = value.match(/^(\d{2}):(\d{2})(?::\d{2})?$/)
+
+    if (!match) {
+        return value
+    }
+
+    const hours = Number.parseInt(match[1] ?? '0', 10)
+    const minutes = match[2] ?? '00'
+    const meridiem = hours >= 12 ? 'PM' : 'AM'
+    const displayHours = hours % 12 || 12
+
+    return `${String(displayHours).padStart(2, '0')}:${minutes} ${meridiem}`
+}
+
+function getTimeOutForTimeIn(timeIn: string) {
+    if (!timeIn) {
+        return ''
+    }
+
+    const workHour = workHours.value.find(wh => {
+        const whTimeIn = formatTwentyFourHourToMeridiem(wh.time_in)
+        return whTimeIn === timeIn
+    })
+
+    if (!workHour) {
+        return ''
+    }
+
+    return formatTwentyFourHourToMeridiem(workHour.time_out)
+}
+
+function normalizeShiftTimeToTwentyFourHour(value: string) {
+    const match = value.match(/^(\d{1,2}):(\d{2})\s?(AM|PM)$/i)
+
+    if (!match) {
+        return ''
+    }
+
+    let hours = Number.parseInt(match[1] ?? '0', 10)
+    const minutes = match[2] ?? '00'
+    const meridiem = (match[3] ?? 'AM').toUpperCase()
+
+    if (hours === 12) {
+        hours = 0
+    }
+
+    if (meridiem === 'PM') {
+        hours += 12
+    }
+
+    return `${String(hours).padStart(2, '0')}:${minutes}`
+}
+
+function getWorkHourForShift(timeIn: string, timeOut: string) {
+    const normalizedTimeIn = normalizeShiftTimeToTwentyFourHour(timeIn)
+    const normalizedTimeOut = normalizeShiftTimeToTwentyFourHour(timeOut)
+
+    if (!normalizedTimeIn || !normalizedTimeOut) {
+        return null
+    }
+
+    return workHours.value.find(workHour => {
+        const existingTimeIn = normalizeShiftTimeToTwentyFourHour(formatTwentyFourHourToMeridiem(workHour.time_in))
+        const existingTimeOut = normalizeShiftTimeToTwentyFourHour(formatTwentyFourHourToMeridiem(workHour.time_out))
+
+        return existingTimeIn === normalizedTimeIn && existingTimeOut === normalizedTimeOut
+    })
+}
+
 function handleUpdateEmployee() {
+  if (!ensureAdminPermission()) {
+    return
+  }
+
   showUpdateModal.value = true
 }
 
@@ -292,13 +514,73 @@ function showErrorAlert(message: string) {
   }, 3000)
 }
 
+function getSelectedDepartmentOption() {
+  const selectedDepartmentId = Number(selectedDepartmentUpdate.value)
+
+  if (!selectedDepartmentId) {
+    return null
+  }
+
+  return departments.value.find(department => department.department_id === selectedDepartmentId) ?? null
+}
+
+function getSelectedDepartmentPositionOption() {
+  const selectedPositionId = Number(selectedDepartmentPositionUpdate.value)
+
+  if (!selectedPositionId) {
+    return null
+  }
+
+  return availableDepartmentPositions.value.find(position => position.position_id === selectedPositionId) ?? null
+}
+
+function getSelectedPositionOption() {
+  const selectedPositionId = Number(selectedPositionUpdate.value)
+
+  if (!selectedPositionId) {
+    return null
+  }
+
+  return availablePositions.value.find(position => position.position_id === selectedPositionId) ?? null
+}
+
+function getDepartmentNameById(departmentId: number | string | null | undefined) {
+  const normalizedDepartmentId = Number(departmentId)
+
+  if (!normalizedDepartmentId) {
+    return ''
+  }
+
+  return departments.value.find(department => department.department_id === normalizedDepartmentId)?.department_name ?? ''
+}
+
+function getPositionNameById(positionId: number | string | null | undefined) {
+  const normalizedPositionId = Number(positionId)
+
+  if (!normalizedPositionId) {
+    return ''
+  }
+
+  return availablePositions.value.find(position => position.position_id === normalizedPositionId)?.position_name ?? ''
+}
+
+function getBackendErrorMessage(err: any, fallback: string) {
+  return err?.data?.message || err?.response?._data?.message || err?.message || fallback
+}
+
 function applyPendingCardUpdateIfNeeded() {
   if (!pendingCardUpdate.value) {
     return
   }
 
-  const directory = props.employees?.length ? props.employees : defaultEmployeeDirectory
-  const foundEmployee = directory.find(item => item.id === pendingCardUpdate.value!.employeeId)
+  // Update loadedEmployee if it matches the pending update
+  if (loadedEmployee.value && loadedEmployee.value.id === pendingCardUpdate.value.employeeId) {
+    loadedEmployee.value.cardStatus = pendingCardUpdate.value.cardStatus
+    loadedEmployee.value.cardNumber = pendingCardUpdate.value.cardNumber
+  }
+
+  // Update props.employees if provided
+  const foundEmployee = props.employees?.find(item => item.id === pendingCardUpdate.value!.employeeId)
   if (foundEmployee) {
     foundEmployee.cardStatus = pendingCardUpdate.value.cardStatus
     foundEmployee.cardNumber = pendingCardUpdate.value.cardNumber
@@ -326,6 +608,11 @@ function handleProceedUpdate() {
     return
   }
 
+  if (selectedUpdateOption.value === 'Department') {
+    showErrorAlert('You cannot update your department')
+    return
+  }
+
   if (
     selectedUpdateOption.value === 'Department' &&
     (!selectedDepartmentUpdate.value || !selectedDepartmentPositionUpdate.value)
@@ -336,11 +623,24 @@ function handleProceedUpdate() {
 
   if (
     selectedUpdateOption.value === 'Department' &&
-    selectedDepartmentUpdate.value === employee.value.department &&
-    selectedDepartmentPositionUpdate.value === employee.value.position
+    getSelectedDepartmentOption()?.department_name === employee.value.department &&
+    getSelectedDepartmentPositionOption()?.position_name === employee.value.position
   ) {
     showErrorAlert('New department and role cannot be the same as current department and role')
 
+    return
+  }
+
+  if (selectedUpdateOption.value === 'Position' && !selectedPositionUpdate.value) {
+    showErrorAlert('Please select a new position')
+    return
+  }
+
+  if (
+    selectedUpdateOption.value === 'Position' &&
+    getSelectedPositionOption()?.position_name === employee.value.position
+  ) {
+    showErrorAlert('New position cannot be the same as current position')
     return
   }
 
@@ -348,7 +648,7 @@ function handleProceedUpdate() {
     selectedUpdateOption.value === 'Shift' &&
     (!selectedShiftStartUpdate.value || !selectedShiftEndUpdate.value)
   ) {
-    showErrorAlert('Please select shift start and shift end')
+    showErrorAlert('Please select morning and afternoon shift time in and out')
     return
   }
 
@@ -356,6 +656,26 @@ function handleProceedUpdate() {
     selectedUpdateOption.value === 'Shift' &&
     selectedShiftStartUpdate.value === (employee.value.shiftStart ?? '') &&
     selectedShiftEndUpdate.value === (employee.value.shiftEnd ?? '')
+  ) {
+    showErrorAlert('New shift schedule cannot be the same as current shift schedule')
+    return
+  }
+
+  if (
+    selectedUpdateOption.value === 'Shift-Time' &&
+    (!selectedMorningTimeInUpdate.value || !selectedMorningTimeOutUpdate.value ||
+     !selectedAfternoonTimeInUpdate.value || !selectedAfternoonTimeOutUpdate.value)
+  ) {
+    showErrorAlert('Please select morning and afternoon shift time in and out')
+    return
+  }
+
+  if (
+    selectedUpdateOption.value === 'Shift-Time' &&
+    selectedMorningTimeInUpdate.value === (employee.value.morningShiftStart ?? '') &&
+    selectedMorningTimeOutUpdate.value === (employee.value.morningShiftEnd ?? '') &&
+    selectedAfternoonTimeInUpdate.value === (employee.value.afternoonShiftStart ?? '') &&
+    selectedAfternoonTimeOutUpdate.value === (employee.value.afternoonShiftEnd ?? '')
   ) {
     showErrorAlert('New shift schedule cannot be the same as current shift schedule')
     return
@@ -384,7 +704,11 @@ function handleProceedUpdate() {
 
 function getSelectedNewDepartment() {
   if (selectedUpdateOption.value === 'Department') {
-    return selectedDepartmentUpdate.value
+    return getSelectedDepartmentOption()?.department_name ?? ''
+  }
+
+  if (selectedUpdateOption.value === 'Position') {
+    return getSelectedPositionOption()?.department_name ?? employee.value.department
   }
 
   return employee.value.department
@@ -392,11 +716,11 @@ function getSelectedNewDepartment() {
 
 function getSelectedNewPosition() {
   if (selectedUpdateOption.value === 'Department') {
-    return selectedDepartmentPositionUpdate.value
+    return getSelectedDepartmentPositionOption()?.position_name ?? ''
   }
 
   if (selectedUpdateOption.value === 'Position') {
-    return selectedPositionUpdate.value
+    return getSelectedPositionOption()?.position_name ?? ''
   }
 
   return employee.value.position
@@ -456,34 +780,101 @@ function goBackFromCardConfirmModal() {
   showUpdateModal.value = true
 }
 
-function confirmUpdateSelection() {
+async function confirmUpdateSelection() {
+  if (!ensureAdminPermission()) {
+    return
+  }
+
   console.log('Confirm update option:', selectedUpdateOption.value)
-  console.log('Old department:', employee.value.department)
-  console.log('Old position:', employee.value.position)
-  console.log('New department:', getSelectedNewDepartment())
-  console.log('New position:', getSelectedNewPosition())
-  console.log('Old shift start:', employee.value.shiftStart)
-  console.log('Old shift end:', employee.value.shiftEnd)
-  console.log('New shift start:', getSelectedNewShiftStart())
-  console.log('New shift end:', getSelectedNewShiftEnd())
   
-  // Update the employee data
-  const directory = props.employees?.length ? props.employees : defaultEmployeeDirectory
-  const foundEmployee = directory.find(item => item.id === props.employeeId)
-  if (foundEmployee) {
-    if (selectedUpdateOption.value === 'Department') {
-      foundEmployee.department = selectedDepartmentUpdate.value
-      foundEmployee.position = selectedDepartmentPositionUpdate.value
-    } else if (selectedUpdateOption.value === 'Position') {
-      foundEmployee.position = selectedPositionUpdate.value
-    } else if (selectedUpdateOption.value === 'Shift') {
-      foundEmployee.shiftStart = selectedShiftStartUpdate.value
-      foundEmployee.shiftEnd = selectedShiftEndUpdate.value
+  const foundEmployee = props.employees?.find(item => item.id === props.employeeId) || loadedEmployee.value
+  if (props.employeeId && (selectedUpdateOption.value === 'Department' || selectedUpdateOption.value === 'Position')) {
+    if (!transactedById.value) {
+      showErrorAlert('You must be signed in to update employee information')
+      return
+    }
+
+    if (departments.value.length === 0) {
+      await loadDepartments()
+    }
+
+    const selectedPositionOption = selectedUpdateOption.value === 'Department'
+      ? getSelectedDepartmentPositionOption()
+      : getSelectedPositionOption()
+    const selectedDepartmentOption = selectedUpdateOption.value === 'Department'
+      ? getSelectedDepartmentOption()
+      : departments.value.find(department => department.department_id === selectedPositionOption?.department_id) ?? null
+
+    if (!selectedDepartmentOption || !selectedPositionOption) {
+      showErrorAlert('Please select a valid department and position')
+      return
+    }
+
+    try {
+      await $fetch(`/api/employees/${props.employeeId}`, {
+        method: 'PUT',
+        body: {
+          update_type: 'Position',
+          transacted_by: transactedById.value,
+          department_id: Number(selectedDepartmentOption.department_id),
+          position_id: Number(selectedPositionOption.position_id),
+        },
+      })
+    } catch (err) {
+      console.error('Update failed:', err)
+      showErrorAlert(getBackendErrorMessage(err, 'Failed to update employee department and position'))
+      return
+    }
+
+    if (foundEmployee) {
+      foundEmployee.department = selectedDepartmentOption.department_name
+      foundEmployee.position = selectedPositionOption.position_name
+    }
+  }
+
+  if (props.employeeId && selectedUpdateOption.value === 'Shift-Time') {
+    if (!transactedById.value) {
+      showErrorAlert('You must be signed in to update employee information')
+      return
+    }
+
+    try {
+      // Get work hour IDs for the selected times
+      const morningWorkHour = getWorkHourForShift(selectedMorningTimeInUpdate.value, selectedMorningTimeOutUpdate.value)
+      const afternoonWorkHour = getWorkHourForShift(selectedAfternoonTimeInUpdate.value, selectedAfternoonTimeOutUpdate.value)
+
+      if (!morningWorkHour || !afternoonWorkHour) {
+        showErrorAlert('Invalid shift time selection')
+        return
+      }
+
+      await $fetch(`/api/employees/${props.employeeId}`, {
+        method: 'PUT',
+        body: {
+          update_type: 'Shift',
+          transacted_by: transactedById.value,
+          morning_work_hour_id: morningWorkHour.work_hour_id,
+          afternoon_work_hour_id: afternoonWorkHour.work_hour_id,
+        },
+      })
+
+      if (foundEmployee) {
+        foundEmployee.morningShiftStart = selectedMorningTimeInUpdate.value
+        foundEmployee.morningShiftEnd = selectedMorningTimeOutUpdate.value
+        foundEmployee.afternoonShiftStart = selectedAfternoonTimeInUpdate.value
+        foundEmployee.afternoonShiftEnd = selectedAfternoonTimeOutUpdate.value
+      }
+    } catch (err) {
+      console.error('Shift-Time update failed:', err)
+      showErrorAlert(getBackendErrorMessage(err, 'Failed to update employee shift time'))
+      return
     }
   }
 
   successAlertMessage.value = selectedUpdateOption.value === 'Shift'
     ? 'Employee shift schedule has been updated'
+    : selectedUpdateOption.value === 'Shift-Time'
+    ? 'Employee shift time has been updated'
     : 'Employee new department and position has been updated'
   
   showUpdateConfirmModal.value = false
@@ -492,9 +883,22 @@ function confirmUpdateSelection() {
 
 function confirmPasswordUpdate() {
   console.log('Confirm update option:', selectedUpdateOption.value)
-  console.log('New password:', selectedPasswordUpdate.value)
+  
+  // Call backend API to update password
+  if (props.employeeId && selectedPasswordUpdate.value && transactedById.value) {
+    $fetch(`/api/employees/${props.employeeId}`, {
+      method: 'PUT',
+      body: {
+        transacted_by: transactedById.value,
+        update_type: 'Password',
+        password: selectedPasswordUpdate.value,
+      },
+    }).catch(err => {
+      console.error('Password update failed:', err)
+    })
+  }
 
-  successAlertMessage.value = 'Password update successfully'
+  successAlertMessage.value = 'Password updated successfully'
 
   showPasswordConfirmModal.value = false
   showLoadingModal.value = true
@@ -509,7 +913,19 @@ function confirmCardUpdate() {
   console.log('Confirm update option:', selectedUpdateOption.value)
   console.log('Scanned RFID number:', scannedRfidNumber.value)
 
-  if (props.employeeId !== null) {
+  if (props.employeeId !== null && transactedById.value) {
+    // Call backend API to update card
+    $fetch(`/api/employees/${props.employeeId}`, {
+      method: 'PUT',
+      body: {
+        transacted_by: transactedById.value,
+        update_type: 'Card',
+        card_number: scannedRfidNumber.value || 'RFID-000000',
+      },
+    }).catch(err => {
+      console.error('Card update failed:', err)
+    })
+    
     pendingCardUpdate.value = {
       employeeId: props.employeeId,
       cardStatus: 'Has Card',
@@ -525,6 +941,8 @@ function confirmCardUpdate() {
 }
 
 onUnmounted(() => {
+
+  
   if (validationAlertTimer) {
     clearTimeout(validationAlertTimer)
   }
@@ -540,6 +958,27 @@ onUnmounted(() => {
   if (scannerCardScannedTimer) {
     clearTimeout(scannerCardScannedTimer)
   }
+})
+
+
+
+async function loadWorkHours() {
+    try {
+        const resp: any = await $fetch('/api/work-hours')
+        const payload = resp?.data ?? resp
+
+        if (Array.isArray(payload)) {
+            workHours.value = payload
+        }
+    } catch (err) {
+        console.error('Failed to load work hours:', err)
+    }
+}
+
+onMounted(async () => {
+    await Promise.all([
+        loadWorkHours(),
+    ])
 })
 </script>
 
@@ -596,14 +1035,36 @@ onUnmounted(() => {
             <span class="label">Salary</span>
             <span class="value">₱{{ employee.salary.toLocaleString() }}</span>
           </div>
-          <div class="info-item">
-            <span class="label">Shift Start</span>
-            <span class="value">{{ employee.shiftStart || 'N/A' }}</span>
-          </div>
-          <div class="info-item">
-            <span class="label">Shift End</span>
-            <span class="value">{{ employee.shiftEnd || 'N/A' }}</span>
-          </div>
+        </div>
+        <h3 class="subsection-title">Shift Time</h3>
+        <div class="shift-container">
+            <div class="shift-section">
+              <h4 class="shift-title">Morning Shift</h4>
+              <div class="shift-grid">
+                <div class="select-field-wrap">
+                  <label class="select-field-label">Time In</label>
+                  <Input :modelValue="employee.morningShiftStart || 'N/A'" readonly />
+                </div>
+                <div class="select-field-wrap">
+                  <label class="select-field-label">Time Out</label>
+                  <Input :modelValue="employee.morningShiftEnd || 'N/A'" readonly />
+                </div>
+              </div>
+            </div>
+
+            <div class="shift-section">
+              <h4 class="shift-title">Afternoon Shift</h4>
+              <div class="shift-grid">
+                <div class="select-field-wrap">
+                  <label class="select-field-label">Time In</label>
+                  <Input :modelValue="employee.afternoonShiftStart || 'N/A'" readonly />
+                </div>
+                <div class="select-field-wrap">
+                  <label class="select-field-label">Time Out</label>
+                  <Input :modelValue="employee.afternoonShiftEnd || 'N/A'" readonly />
+                </div>
+              </div>
+            </div>
         </div>
       </div>
 
@@ -678,6 +1139,7 @@ onUnmounted(() => {
           </div>
         </div>
       </div>
+      
 
       <div class="form-divider"></div>
 
@@ -744,21 +1206,59 @@ onUnmounted(() => {
 
           <select id="newDepartmentSelect" v-model="selectedDepartmentUpdate" class="department-update-select" aria-label="New Department">
             <option value="" disabled>Select new department</option>
-            <option value="HR">HR</option>
-            <option value="IT">IT</option>
-            <option value="Finance">Finance</option>
-            <option value="Operations">Operations</option>
+            <option
+              v-for="department in departments"
+              :key="department.department_id"
+              :value="String(department.department_id)"
+            >
+              {{ department.department_name }}
+            </option>
           </select>
 
           <label class="department-update-label" for="newDepartmentPositionSelect">Select position</label>
 
           <select id="newDepartmentPositionSelect" v-model="selectedDepartmentPositionUpdate" class="department-update-select" aria-label="New Department Position">
             <option value="" disabled>Select new position</option>
-            <option value="Manager">Manager</option>
-            <option value="Senior">Senior</option>
-            <option value="Junior">Junior</option>
-            <option value="Intern">Intern</option>
+            <option
+              v-for="position in availableDepartmentPositions"
+              :key="position.position_id"
+              :value="String(position.position_id)"
+            >
+              {{ position.position_name }}
+            </option>
           </select>
+        </div>
+
+        <div v-if="selectedUpdateOption === 'Shift-Time'" class="department-update-panel">
+          <h4 class="shift-title">Morning Shift</h4>
+          <div class="shift-grid">
+            <div class="select-field-wrap">
+              <label class="department-update-label" for="morningTimeInUpdate">Time In</label>
+              <select id="morningTimeInUpdate" v-model="selectedMorningTimeInUpdate" class="department-update-select" aria-label="Morning Time In">
+                <option value="">Select time in</option>
+                <option v-for="time in availableMorningShiftTimes" :key="time" :value="time">{{ time }}</option>
+              </select>
+            </div>
+            <div class="select-field-wrap">
+              <label class="department-update-label" for="morningTimeOutUpdate">Time Out</label>
+              <input id="morningTimeOutUpdate" v-model="selectedMorningTimeOutUpdate" type="text" class="department-update-select" aria-label="Morning Time Out" readonly />
+            </div>
+          </div>
+
+          <h4 class="shift-title">Afternoon Shift</h4>
+          <div class="shift-grid">
+            <div class="select-field-wrap">
+              <label class="department-update-label" for="afternoonTimeInUpdate">Time In</label>
+              <select id="afternoonTimeInUpdate" v-model="selectedAfternoonTimeInUpdate" class="department-update-select" aria-label="Afternoon Time In">
+                <option value="">Select time in</option>
+                <option v-for="time in availableAfternoonShiftTimes" :key="time" :value="time">{{ time }}</option>
+              </select>
+            </div>
+            <div class="select-field-wrap">
+              <label class="department-update-label" for="afternoonTimeOutUpdate">Time Out</label>
+              <input id="afternoonTimeOutUpdate" v-model="selectedAfternoonTimeOutUpdate" type="text" class="department-update-select" aria-label="Afternoon Time Out" readonly />
+            </div>
+          </div>
         </div>
 
         <div v-if="selectedUpdateOption === 'Position'" class="department-update-panel">
@@ -766,10 +1266,13 @@ onUnmounted(() => {
 
           <select id="newPositionSelect" v-model="selectedPositionUpdate" class="department-update-select" aria-label="New Position">
             <option value="" disabled>Select new position</option>
-            <option value="Manager">Manager</option>
-            <option value="Senior">Senior</option>
-            <option value="Junior">Junior</option>
-            <option value="Intern">Intern</option>
+            <option
+              v-for="position in availablePositions"
+              :key="position.position_id"
+              :value="String(position.position_id)"
+            >
+              {{ position.position_name }} - {{ position.department_name }}
+            </option>
           </select>
         </div>
 
@@ -827,16 +1330,40 @@ onUnmounted(() => {
         <h3 class="update-modal-title">Confirm Update</h3>
 
         <div class="confirm-grid">
-          <div class="confirm-card">
+          <div v-if="selectedUpdateOption === 'Shift-Time'" class="confirm-card">
+            <h4 class="confirm-card-title">Current Shift Time</h4>
+            <p><strong>Morning Time In:</strong> {{ employee.morningShiftStart || 'N/A' }}</p>
+            <p><strong>Morning Time Out:</strong> {{ employee.morningShiftEnd || 'N/A' }}</p>
+            <p><strong>Afternoon Time In:</strong> {{ employee.afternoonShiftStart || 'N/A' }}</p>
+            <p><strong>Afternoon Time Out:</strong> {{ employee.afternoonShiftEnd || 'N/A' }}</p>
+          </div>
+
+          <div v-if="selectedUpdateOption === 'Shift-Time'" class="confirm-card">
+            <h4 class="confirm-card-title">New Shift Time</h4>
+            <p><strong>Morning Time In:</strong> {{ selectedMorningTimeInUpdate || 'N/A' }}</p>
+            <p><strong>Morning Time Out:</strong> {{ selectedMorningTimeOutUpdate || 'N/A' }}</p>
+            <p><strong>Afternoon Time In:</strong> {{ selectedAfternoonTimeInUpdate || 'N/A' }}</p>
+            <p><strong>Afternoon Time Out:</strong> {{ selectedAfternoonTimeOutUpdate || 'N/A' }}</p>
+          </div>
+
+          <div v-if="selectedUpdateOption !== 'Shift-Time'" class="confirm-card">
             <h4 class="confirm-card-title">Old Department and Position</h4>
             <p><strong>Department:</strong> {{ employee.department }}</p>
             <p><strong>Position:</strong> {{ employee.position }}</p>
           </div>
 
-          <div class="confirm-card">
+          <div v-if="selectedUpdateOption !== 'Shift-Time'" class="confirm-card">
             <h4 class="confirm-card-title">New Department and Position</h4>
-            <p><strong>Department:</strong> {{ getSelectedNewDepartment() || 'N/A' }}</p>
-            <p><strong>Position:</strong> {{ getSelectedNewPosition() || 'N/A' }}</p>
+            <p><strong>Department:</strong>
+              {{ selectedUpdateOption === 'Department'
+                ? getDepartmentNameById(selectedDepartmentUpdate) || 'N/A'
+                : getSelectedNewDepartment() || 'N/A' }}
+            </p>
+            <p><strong>Position:</strong>
+              {{ selectedUpdateOption === 'Department'
+                ? getPositionNameById(selectedDepartmentPositionUpdate) || 'N/A'
+                : getPositionNameById(selectedPositionUpdate) || getSelectedNewPosition() || 'N/A' }}
+            </p>
           </div>
         </div>
 
@@ -1219,6 +1746,58 @@ onUnmounted(() => {
     grid-template-columns: 1fr;
 }
 
+.shift-container {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.5rem;
+}
+
+.shift-section {
+    display: grid;
+    gap: 0.75rem;
+    padding: 1rem;
+    background: #f8fafc;
+    border-radius: 10px;
+    border: 1px solid #e5e7eb;
+}
+
+.shift-title {
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.subsection-title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.shift-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.9rem;
+}
+
+.select-field-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.select-field-label {
+    color: #1f2937;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.required-indicator {
+    color: #ef4444;
+    margin-left: 2px;
+}
+
 .info-item {
     display: grid;
     gap: 0.3rem;
@@ -1360,12 +1939,11 @@ onUnmounted(() => {
   padding: 0.55rem 0.75rem;
   border: 1px solid #d1d5db;
   border-radius: 10px;
-  background-color: #f8fafc;
+  background-color: #ffffff;
   color: #111827;
   font-size: 0.875rem;
   outline: none;
   appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236B7280' d='M2.5 4.5l3.5 3 3.5-3'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 0.75rem center;
   padding-right: 2rem;
@@ -1403,8 +1981,8 @@ onUnmounted(() => {
 }
 
 .confirm-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+  display: flex;
+  flex-direction: column;
   gap: 0.75rem;
 }
 
@@ -1468,9 +2046,6 @@ onUnmounted(() => {
 }
 
 @media (max-width: 640px) {
-  .confirm-grid {
-    grid-template-columns: 1fr;
-  }
 }
 
 @media (max-width: 1024px) {

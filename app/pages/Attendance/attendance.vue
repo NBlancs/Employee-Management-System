@@ -394,25 +394,36 @@ function onViewShiftHours() {
 @media (max-width: 640px) {
     .attendance-search {
         align-items: stretch;
+        justify-content: center;
+        width: 220px;
     }
 
     .date-field,
-    .date-input,
     .department-field,
     .search-button,
     .view-shift-hours-button {
         margin-left: 0;
+        width: 220px;
+        max-width: 220px;
+    }
+
+    .date-input {
         width: 100%;
     }
 
     .department-filter-control {
         width: 100%;
+        flex-direction: column;
+        align-items: stretch;
     }
 
     .department-select {
-        flex: 1 1 auto;
+        width: 100%;
         min-width: 0;
-        width: auto;
+    }
+
+    .clear-filter-button {
+        width: 100%;
     }
 
     .attendance-table {

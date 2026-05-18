@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ArrowLeftIcon, PlusIcon, TrashIcon, EyeIcon } from '@heroicons/vue/24/outline'
-import { ref, computed, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import Alert from '~/components/Alert.vue'
 import Modal from '~/components/Modal.vue'
 
@@ -17,8 +17,25 @@ interface AttendanceData {
 
 interface ShiftRecord {
     id: number
+    work_hour_id?: number
     start: string
     end: string
+    time_in?: string
+    time_out?: string
+    classification?: string
+}
+
+interface LoggedInUser {
+    employeeId: number
+    accountId: number
+    username: string
+    firstName: string
+    middleName: string
+    lastName: string
+    suffix: string
+    displayName: string
+    role: string
+    department: string
 }
 
 defineProps<{
@@ -31,6 +48,8 @@ const emit = defineEmits<{
 }>()
 
 const shifts = ref<ShiftRecord[]>([])
+const isLoadingShifts = ref(false)
+const loadingError = ref('')
 
 const isModalOpen = ref(false)
 const isConfirmationModalOpen = ref(false)
@@ -38,12 +57,28 @@ const isDeleteConfirmationModalOpen = ref(false)
 const isLoadingModalOpen = ref(false)
 const showSuccessAlert = ref(false)
 const successAlertMessage = ref('')
-const shiftStartTime = ref('')
-const shiftStartError = ref('')
+const morningShiftTimeIn = ref('')
+const afternoonShiftTimeIn = ref('')
+const morningShiftError = ref('')
+const afternoonShiftError = ref('')
 const loadingAction = ref<'add' | 'delete' | null>(null)
 const pendingDeleteId = ref<number | null>(null)
 let loadingTimer: ReturnType<typeof setTimeout> | null = null
 let alertTimer: ReturnType<typeof setTimeout> | null = null
+
+const userCookie = useCookie<string | null>('ems_user')
+const currentUser = computed<LoggedInUser | null>(() => {
+    if (!userCookie.value) {
+        return null
+    }
+
+    try {
+        return JSON.parse(userCookie.value) as LoggedInUser
+    } catch {
+        return null
+    }
+})
+const transactedById = computed(() => currentUser.value?.employeeId ?? null)
 
 const loadingText = computed(() => {
     if (loadingAction.value === 'delete') return 'Deleting shift hour'
@@ -62,21 +97,53 @@ const pendingDeleteShiftRange = computed(() => {
     return `${formatTimeTo12Hour(pendingDeleteShift.value.start)} - ${formatTimeTo12Hour(pendingDeleteShift.value.end)}`
 })
 
-const shiftEndTime = computed(() => {
-    if (!shiftStartTime.value) return ''
-
-    const [hours = 0, minutes = 0] = shiftStartTime.value.split(':').map(Number)
+const morningShiftTimeOut = computed(() => {
+    if (!morningShiftTimeIn.value) return ''
+    const [hours = 0, minutes = 0] = morningShiftTimeIn.value.split(':').map(Number)
     const startDate = new Date()
     startDate.setHours(hours, minutes, 0, 0)
-
-    let endDate = new Date(startDate.getTime() + 8 * 60 * 60 * 1000)
-
-    if (endDate.getHours() === 12) {
-        endDate = new Date(endDate.getTime() + 60 * 60 * 1000)
-    }
-
+    const endDate = new Date(startDate.getTime() + 4 * 60 * 60 * 1000)
     return `${String(endDate.getHours()).padStart(2, '0')}:${String(endDate.getMinutes()).padStart(2, '0')}`
 })
+
+const afternoonShiftTimeOut = computed(() => {
+    if (!afternoonShiftTimeIn.value) return ''
+    const [hours = 0, minutes = 0] = afternoonShiftTimeIn.value.split(':').map(Number)
+    const startDate = new Date()
+    startDate.setHours(hours, minutes, 0, 0)
+    const endDate = new Date(startDate.getTime() + 4 * 60 * 60 * 1000)
+    return `${String(endDate.getHours()).padStart(2, '0')}:${String(endDate.getMinutes()).padStart(2, '0')}`
+})
+
+function getBackendErrorMessage(err: any, fallback: string) {
+    return err?.data?.message || err?.response?._data?.message || err?.message || fallback
+}
+
+async function loadShifts() {
+    isLoadingShifts.value = true
+    loadingError.value = ''
+
+    try {
+        const resp: any = await $fetch('/api/work-hours')
+        const payload = resp?.data ?? resp
+
+        if (Array.isArray(payload)) {
+            shifts.value = payload.map((wh: any) => ({
+                id: wh.work_hour_id,
+                work_hour_id: wh.work_hour_id,
+                start: wh.time_in,
+                end: wh.time_out,
+                time_in: wh.time_in,
+                time_out: wh.time_out,
+                classification: wh.classification,
+            }))
+        }
+    } catch (err) {
+        loadingError.value = getBackendErrorMessage(err, 'Failed to load shift hours')
+    } finally {
+        isLoadingShifts.value = false
+    }
+}
 
 function goBack() {
     emit('back')
@@ -86,22 +153,59 @@ function addShiftHours() {
     isModalOpen.value = true
 }
 
-function isDuplicateStart(time: string) {
-    return shifts.value.some(s => s.start === time)
+function isDuplicateStart(morningTime: string, afternoonTime: string) {
+    const morningExists = shifts.value.some(s => s.start === morningTime)
+    const afternoonExists = shifts.value.some(s => s.start === afternoonTime)
+    return { morningExists, afternoonExists }
+}
+
+function isAMTime(time: string): boolean {
+    const hours = Number((time.split(':')[0]) || 0)
+    return hours < 12
+}
+
+function isPMTime(time: string): boolean {
+    const hours = Number((time.split(':')[0]) || 0)
+    return hours >= 12
 }
 
 function handleAddShift() {
-    shiftStartError.value = ''
+    morningShiftError.value = ''
+    afternoonShiftError.value = ''
 
-    if (!shiftStartTime.value) {
-        shiftStartError.value = 'Shift start time is required'
-        return
+    let hasError = false
+
+    if (!morningShiftTimeIn.value) {
+        morningShiftError.value = 'Morning shift start time is required'
+        hasError = true
+    } else if (!isAMTime(morningShiftTimeIn.value)) {
+        morningShiftError.value = 'Morning shift must be AM (before 12:00)'
+        hasError = true
     }
 
-    if (isDuplicateStart(shiftStartTime.value)) {
-        shiftStartError.value = 'This shift start time already exists'
-        return
+    if (!afternoonShiftTimeIn.value) {
+        afternoonShiftError.value = 'Afternoon shift start time is required'
+        hasError = true
+    } else if (!isPMTime(afternoonShiftTimeIn.value)) {
+        afternoonShiftError.value = 'Afternoon shift must be PM (12:00 or later)'
+        hasError = true
     }
+
+    if (hasError) return
+
+    const { morningExists, afternoonExists } = isDuplicateStart(morningShiftTimeIn.value, afternoonShiftTimeIn.value)
+
+    if (morningExists) {
+        morningShiftError.value = 'This morning shift time already exists'
+        hasError = true
+    }
+
+    if (afternoonExists) {
+        afternoonShiftError.value = 'This afternoon shift time already exists'
+        hasError = true
+    }
+
+    if (hasError) return
 
     isConfirmationModalOpen.value = true
 }
@@ -115,29 +219,86 @@ function confirmAddShift() {
         clearTimeout(loadingTimer)
     }
 
-    loadingTimer = setTimeout(() => {
-        shifts.value.push({
-            id: Date.now(),
-            start: shiftStartTime.value,
-            end: shiftEndTime.value
-        })
+    loadingTimer = setTimeout(async () => {
+        try {
+            // Add morning shift
+            const morningShift: any = await $fetch('/api/work-hours', {
+                method: 'POST',
+                body: {
+                    transacted_by: transactedById.value,
+                    time_in: morningShiftTimeIn.value,
+                    time_out: morningShiftTimeOut.value,
+                },
+            })
 
-        isLoadingModalOpen.value = false
-        loadingAction.value = null
-        isModalOpen.value = false
-        shiftStartTime.value = ''
-        shiftStartError.value = ''
+            const morningPayload = morningShift?.data ?? morningShift
 
-        showSuccessAlert.value = true
-        successAlertMessage.value = 'Shift hour added successfully.'
+            shifts.value.push({
+                id: morningPayload.work_hour_id,
+                work_hour_id: morningPayload.work_hour_id,
+                start: morningPayload.time_in,
+                end: morningPayload.time_out,
+                time_in: morningPayload.time_in,
+                time_out: morningPayload.time_out,
+                classification: morningPayload.classification,
+            })
 
-        if (alertTimer) {
-            clearTimeout(alertTimer)
+            // Add afternoon shift
+            const afternoonShift: any = await $fetch('/api/work-hours', {
+                method: 'POST',
+                body: {
+                    transacted_by: transactedById.value,
+                    time_in: afternoonShiftTimeIn.value,
+                    time_out: afternoonShiftTimeOut.value,
+                },
+            })
+
+            const afternoonPayload = afternoonShift?.data ?? afternoonShift
+
+            shifts.value.push({
+                id: afternoonPayload.work_hour_id,
+                work_hour_id: afternoonPayload.work_hour_id,
+                start: afternoonPayload.time_in,
+                end: afternoonPayload.time_out,
+                time_in: afternoonPayload.time_in,
+                time_out: afternoonPayload.time_out,
+                classification: afternoonPayload.classification,
+            })
+
+            isLoadingModalOpen.value = false
+            loadingAction.value = null
+            isModalOpen.value = false
+            morningShiftTimeIn.value = ''
+            afternoonShiftTimeIn.value = ''
+            morningShiftError.value = ''
+            afternoonShiftError.value = ''
+
+            showSuccessAlert.value = true
+            successAlertMessage.value = 'Both shift hours added successfully.'
+
+            if (alertTimer) {
+                clearTimeout(alertTimer)
+            }
+
+            alertTimer = setTimeout(() => {
+                showSuccessAlert.value = false
+            }, 3000)
+        } catch (err) {
+            isLoadingModalOpen.value = false
+            loadingAction.value = null
+            const errorMessage = getBackendErrorMessage(err, 'Failed to add shift hours')
+            console.error('Add shift error:', err)
+            showSuccessAlert.value = true
+            successAlertMessage.value = errorMessage
+
+            if (alertTimer) {
+                clearTimeout(alertTimer)
+            }
+
+            alertTimer = setTimeout(() => {
+                showSuccessAlert.value = false
+            }, 3000)
         }
-
-        alertTimer = setTimeout(() => {
-            showSuccessAlert.value = false
-        }, 3000)
     }, 1500)
 }
 
@@ -178,23 +339,44 @@ function confirmDeleteShift() {
 
     const deleteId = pendingDeleteId.value
 
-    loadingTimer = setTimeout(() => {
-        shifts.value = shifts.value.filter(s => s.id !== deleteId)
+    loadingTimer = setTimeout(async () => {
+        try {
+            await $fetch(`/api/work-hours/${deleteId}?transacted_by=${transactedById.value}`, {
+                method: 'DELETE',
+            })
 
-        isLoadingModalOpen.value = false
-        loadingAction.value = null
-        pendingDeleteId.value = null
+            shifts.value = shifts.value.filter(s => s.id !== deleteId)
 
-        showSuccessAlert.value = true
-        successAlertMessage.value = 'Shift hour deleted successfully.'
+            isLoadingModalOpen.value = false
+            loadingAction.value = null
+            pendingDeleteId.value = null
 
-        if (alertTimer) {
-            clearTimeout(alertTimer)
+            showSuccessAlert.value = true
+            successAlertMessage.value = 'Shift hour deleted successfully.'
+
+            if (alertTimer) {
+                clearTimeout(alertTimer)
+            }
+
+            alertTimer = setTimeout(() => {
+                showSuccessAlert.value = false
+            }, 3000)
+        } catch (err) {
+            isLoadingModalOpen.value = false
+            loadingAction.value = null
+            pendingDeleteId.value = null
+            const errorMessage = getBackendErrorMessage(err, 'Failed to delete shift hour')
+            showSuccessAlert.value = true
+            successAlertMessage.value = errorMessage
+
+            if (alertTimer) {
+                clearTimeout(alertTimer)
+            }
+
+            alertTimer = setTimeout(() => {
+                showSuccessAlert.value = false
+            }, 3000)
         }
-
-        alertTimer = setTimeout(() => {
-            showSuccessAlert.value = false
-        }, 3000)
     }, 1500)
 }
 
@@ -210,9 +392,15 @@ function closeAllModals() {
     isLoadingModalOpen.value = false
     loadingAction.value = null
     pendingDeleteId.value = null
-    shiftStartTime.value = ''
-    shiftStartError.value = ''
+    morningShiftTimeIn.value = ''
+    afternoonShiftTimeIn.value = ''
+    morningShiftError.value = ''
+    afternoonShiftError.value = ''
 }
+
+onMounted(async () => {
+    await loadShifts()
+})
 
 onUnmounted(() => {
     if (loadingTimer) {
@@ -247,6 +435,16 @@ function formatTimeTo12Hour(timeString: string): string {
             />
         </div>
 
+        <div v-if="loadingError" class="shift-hours-alert-wrap">
+            <Alert
+                title="Error"
+                :message="loadingError"
+                variant="error"
+                :dismissible="true"
+                @close="loadingError = ''"
+            />
+        </div>
+
         <div class="shift-hours-header">
             <button class="back-button" @click="goBack">
                 <ArrowLeftIcon class="back-icon" />
@@ -255,7 +453,11 @@ function formatTimeTo12Hour(timeString: string): string {
         </div>
 
         <div class="shift-hours-table-wrap">
-            <table class="shift-hours-table">
+            <div v-if="isLoadingShifts" class="loading-state">
+                <div class="spinner"></div>
+                <p class="loading-text">Loading shift hours...</p>
+            </div>
+            <table v-else class="shift-hours-table">
                 <thead>
                     <tr>
                         <th>Shift Start</th>
@@ -265,7 +467,7 @@ function formatTimeTo12Hour(timeString: string): string {
                 </thead>
                 <tbody>
                     <tr v-if="shifts.length === 0">
-                        <td colspan="3" class="empty-state">
+                        <td colspan="4" class="empty-state">
                             No shift hours records found.
                         </td>
                     </tr>
@@ -299,30 +501,70 @@ function formatTimeTo12Hour(timeString: string): string {
     <Modal
         v-model:open="isModalOpen"
         title="Add Shift Hours"
-        description="Set the shift start time. The end time will automatically be 8 hours later."
+        description="Set the shift times. The end time will automatically be 4 hours later."
         :hide-trigger="true"
     >
         <div class="modal-content">
-            <div class="form-group">
-                <label class="form-label">Shift Start Time</label>
-                <input
-                    v-model="shiftStartTime"
-                    type="time"
-                    class="time-input"
-                    :class="{ 'time-input--error': shiftStartError }"
-                    @input="shiftStartError = ''"
-                />
-                <p v-if="shiftStartError" class="error-message">{{ shiftStartError }}</p>
+            <!-- Morning Shift -->
+            <div class="shift-section">
+                <h3 class="shift-section-title">Morning Shift (AM only)</h3>
+                <div class="form-group">
+                    <label class="form-label">Time In</label>
+                    <input
+                        v-model="morningShiftTimeIn"
+                        type="time"
+                        class="time-input"
+                        :class="{ 'time-input--error': morningShiftError }"
+                        @input="() => {
+                            morningShiftError = ''
+                            if (morningShiftTimeIn && !isAMTime(morningShiftTimeIn)) {
+                                morningShiftError = 'Morning shift must be AM (before 12:00)'
+                            }
+                        }"
+                    />
+                    <p v-if="morningShiftError" class="error-message">{{ morningShiftError }}</p>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Time Out</label>
+                    <input
+                        :value="morningShiftTimeOut"
+                        type="time"
+                        class="time-input time-input--disabled"
+                        disabled
+                    />
+                </div>
             </div>
 
-            <div class="form-group">
-                <label class="form-label">Shift End Time</label>
-                <input
-                    :value="shiftEndTime"
-                    type="time"
-                    class="time-input time-input--disabled"
-                    disabled
-                />
+            <!-- Afternoon Shift -->
+            <div class="shift-section">
+                <h3 class="shift-section-title">Afternoon Shift (PM only)</h3>
+                <div class="form-group">
+                    <label class="form-label">Time In</label>
+                    <input
+                        v-model="afternoonShiftTimeIn"
+                        type="time"
+                        class="time-input"
+                        :class="{ 'time-input--error': afternoonShiftError }"
+                        @input="() => {
+                            afternoonShiftError = ''
+                            if (afternoonShiftTimeIn && !isPMTime(afternoonShiftTimeIn)) {
+                                afternoonShiftError = 'Afternoon shift must be PM (12:00 or later)'
+                            }
+                        }"
+                    />
+                    <p v-if="afternoonShiftError" class="error-message">{{ afternoonShiftError }}</p>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Time Out</label>
+                    <input
+                        :value="afternoonShiftTimeOut"
+                        type="time"
+                        class="time-input time-input--disabled"
+                        disabled
+                    />
+                </div>
             </div>
         </div>
 
@@ -332,7 +574,7 @@ function formatTimeTo12Hour(timeString: string): string {
                     Cancel
                 </button>
                 <button class="modal-button modal-button--subtle-blue" @click="handleAddShift">
-                    Add Shift
+                    Add Shifts
                 </button>
             </div>
         </template>
@@ -346,15 +588,29 @@ function formatTimeTo12Hour(timeString: string): string {
         :dismissible="false"
     >
         <div class="confirmation-content">
-            <p class="confirmation-text">Add this shift?</p>
+            <p class="confirmation-text">Add these shifts?</p>
             <div class="shift-details">
-                <div class="detail-row">
-                    <span>Shift Start:</span>
-                    <span>{{ formatTimeTo12Hour(shiftStartTime) }}</span>
+                <div class="detail-section">
+                    <h4 class="detail-section-title">Morning Shift</h4>
+                    <div class="detail-row">
+                        <span>Time In:</span>
+                        <span>{{ formatTimeTo12Hour(morningShiftTimeIn) }}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span>Time Out:</span>
+                        <span>{{ formatTimeTo12Hour(morningShiftTimeOut) }}</span>
+                    </div>
                 </div>
-                <div class="detail-row">
-                    <span>Shift End:</span>
-                    <span>{{ formatTimeTo12Hour(shiftEndTime) }}</span>
+                <div class="detail-section">
+                    <h4 class="detail-section-title">Afternoon Shift</h4>
+                    <div class="detail-row">
+                        <span>Time In:</span>
+                        <span>{{ formatTimeTo12Hour(afternoonShiftTimeIn) }}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span>Time Out:</span>
+                        <span>{{ formatTimeTo12Hour(afternoonShiftTimeOut) }}</span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -500,7 +756,7 @@ function formatTimeTo12Hour(timeString: string): string {
 }
 
 .actions-column {
-    width: 120px;
+    width: 100px
 }
 
 .action-button {
@@ -525,6 +781,16 @@ function formatTimeTo12Hour(timeString: string): string {
     text-align: center;
     color: #94a3b8;
     padding: 24px 14px;
+}
+
+.loading-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    padding: 3rem 2rem;
+    text-align: center;
 }
 
 .floating-button {
@@ -557,7 +823,45 @@ function formatTimeTo12Hour(timeString: string): string {
 
 .modal-content {
     display: grid;
-    gap: 1rem;
+    gap: 1.5rem;
+}
+
+.shift-section {
+    display: grid;
+    gap: 0.75rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.shift-section:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.shift-section-title {
+    margin: 0;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.detail-section {
+    border-top: 1px solid #e5e7eb;
+    padding-top: 0.75rem;
+    margin-top: 0.75rem;
+}
+
+.detail-section:first-child {
+    border-top: none;
+    padding-top: 0;
+    margin-top: 0;
+}
+
+.detail-section-title {
+    margin: 0 0 0.5rem 0;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #475569;
 }
 
 .form-group {
