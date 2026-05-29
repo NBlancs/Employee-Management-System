@@ -229,26 +229,24 @@ onUnmounted(() => {
 
 <style scoped>
 
-
 .dashboard h1 {
   margin-bottom: 1rem;
   color: #1a1a1a;
   font-size: 1.2rem;
 }
 
-
-#recent-attendance{
+#recent-attendance {
   margin-top: 1rem;
   margin: 0;
   font-size: 1rem;
 }
 
-#recent-transaction{
+#recent-transaction {
   margin-top: 1rem;
   font-size: 1rem;
 }
 
-#date{
+#date {
   margin-top: 1rem;
   font-size: 0.9rem;
   color: #64748b;
@@ -263,12 +261,19 @@ onUnmounted(() => {
   gap: 12px;
 }
 
+.recent-transaction-header {
+  margin-top: 1rem;
+  margin-bottom: 0.75rem;
+}
+
 .recent-attendance-table {
   background: #ffffff;
   border: 1px solid #e5e7eb;
   border-radius: 12px;
   padding: 0;
   overflow: hidden;
+  /* Allow horizontal scroll on very small screens */
+  overflow-x: auto;
 }
 
 .loading-cell {
@@ -315,6 +320,7 @@ onUnmounted(() => {
   border-bottom: 1px solid #f1f5f9;
   font-size: 0.88rem;
   color: #1f2937;
+  white-space: nowrap;
 }
 
 .attendance-table th {
@@ -373,17 +379,74 @@ onUnmounted(() => {
   border-color: #e5e7eb;
 }
 
+/* --- Overview grid --- */
 .overview-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   gap: 1.5rem;
 }
 
-@media (max-width: 820px) {
+/* --- Responsive breakpoints (mirrors department-info.vue) --- */
+@media (max-width: 760px) {
   .overview-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: 1fr;
     gap: 1rem;
+    width: 300px;
   }
-}
 
+  .dashboard h1 {
+    font-size: 1.05rem;
+    width: 300px;
+
+  }
+
+  #recent-attendance,
+  #recent-transaction {
+    font-size: 0.95rem;
+  }
+
+  #date {
+    font-size: 0.82rem;
+  }
+
+  .recent-attendance-header {
+    margin-top: 0.75rem;
+    margin-bottom: 0.5rem;
+    width: 300px;
+
+  }
+
+  .recent-attendance-table :deep(table),
+  .recent-transaction-table :deep(table) {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .recent-attendance-table :deep(th),
+  .recent-attendance-table :deep(td),
+  .recent-transaction-table :deep(th),
+  .recent-transaction-table :deep(td) {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid #f1f5f9;
+    font-size: 0.9rem;
+    color: #1f2937;
+  }
+
+  .recent-attendance-table :deep(th),
+  .recent-transaction-table :deep(th) {
+    background: #f8fafc;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: none;
+    letter-spacing: normal;
+  }
+
+  .recent-attendance-table :deep(tbody tr:last-child td),
+  .recent-transaction-table :deep(tbody tr:last-child td){
+    border-bottom: none;
+  }
+
+}
 </style>

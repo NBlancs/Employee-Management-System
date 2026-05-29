@@ -126,7 +126,6 @@ const navItems = [
   { label: 'Departments', icon:ShieldCheckIcon, id:'departments'},
   { label: 'Attendance', icon: CalendarDaysIcon, id: 'attendance' },
   { label: 'Transactions', icon: ClockIcon, id: 'transactions' },
-  { label: 'Reports', icon: ChartBarSquareIcon, id: 'reports' },
   
 ]
 
@@ -251,16 +250,7 @@ onUnmounted(() => {
       </div>
 
       <div class="sidebar-footer">
-        <button
-          class="nav-item"
-          :class="{ 'settings-btn--active': activeTab === 'settings' }"
-          id="settings-btn"
-          type="button"
-          @click="setActiveTab('settings')"
-        >
-          <Cog6ToothIcon class="nav-item__icon" aria-hidden="true" />
-          <span>Settings</span>
-        </button>
+        
         <button class="nav-item" type="button" @click="openLogoutConfirm">
           <ArrowLeftOnRectangleIcon class="nav-item__icon" aria-hidden="true" />
           <span>Logout</span>

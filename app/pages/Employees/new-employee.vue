@@ -1150,6 +1150,12 @@ onUnmounted(() => {
     .confirmation-section {
         padding: 0.75rem;
     }
+
+    .validation-alert-wrap{
+        top: 12px;
+        right: 12px;
+        width: calc(100vw - 24px);
+    }
 }
 
 .loading-modal-content {

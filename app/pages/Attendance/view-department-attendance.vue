@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { ArrowLeftIcon, EyeIcon, FunnelIcon, MagnifyingGlassIcon } from '@heroicons/vue/24/outline'
-import IconInput from '~/components/IconInput.vue'
+import { ArrowLeftIcon, FunnelIcon } from '@heroicons/vue/24/outline'
 import Button from '~/components/Button.vue'
 
 interface AttendanceData {
@@ -18,19 +17,16 @@ interface AttendanceData {
 interface PositionAttendanceRow {
     id: number
     fullName: string
-    position: string
     salary: number
     totalPresent: number
     totalAbsent: number
     totalLate: number
-    totalLeave: number
-    netWorth: number
+    grossPay: number
     dates: string
 }
 
 interface EmployeeAttendanceSummaryData extends AttendanceData {
     fullName: string
-    position: string
     salary: number
 }
 
@@ -43,18 +39,14 @@ const emit = defineEmits<{
     viewSummary: [attendance: EmployeeAttendanceSummaryData]
 }>()
 
-const searchQuery = ref('')
-const appliedSearchQuery = ref('')
 const monthsFilter = ref('')
 const yearsFilter = ref('')
-const appliedMonthFilter = ref('')
-const appliedYearFilter = ref('')
 
 const positionAttendanceRows = ref<PositionAttendanceRow[]>([
-  { id: 1, fullName: 'Callo, Je-ann', position: 'Manager', salary: 52000, totalPresent: 20, totalAbsent: 5, totalLate: 3, totalLeave: 2, netWorth: 100000, dates: '2026-01-15 - 2026-01-30' },
-  { id: 2, fullName: 'Valle, Jayneth', position: 'Supervisor', salary: 42000, totalPresent: 18, totalAbsent: 7, totalLate: 4, totalLeave: 1, netWorth: 80000,dates: '2026-02-15 - 2026-02-30' },
-  { id: 3, fullName: 'Lascuna, Joel Kent', position: 'Staff', salary: 28000, totalPresent: 15, totalAbsent: 10, totalLate: 6, totalLeave: 3, netWorth: 60000, dates: '2026-03-15 - 2026-03-30' },
-  { id: 4, fullName: 'Maturan, Walter', position: 'Assistant', salary: 24000, totalPresent: 12, totalAbsent: 13, totalLate: 8, totalLeave: 4, netWorth: 50000, dates: '2026-04-15 - 2026-04-30' },
+  { id: 1, fullName: 'Callo, Je-ann', salary: 52000, totalPresent: 20, totalAbsent: 5, totalLate: 3, grossPay: 100000, dates: '2026-01-15 - 2026-01-30' },
+  { id: 2, fullName: 'Valle, Jayneth', salary: 42000, totalPresent: 18, totalAbsent: 7, totalLate: 4, grossPay: 80000, dates: '2026-02-15 - 2026-02-30' },
+  { id: 3, fullName: 'Lascuna, Joel Kent', salary: 28000, totalPresent: 15, totalAbsent: 10, totalLate: 6, grossPay: 60000, dates: '2026-03-15 - 2026-03-30' },
+  { id: 4, fullName: 'Maturan, Walter', salary: 24000, totalPresent: 12, totalAbsent: 13, totalLate: 8, grossPay: 50000, dates: '2026-04-15 - 2026-04-30' },
 ])
 
 const monthOptions = [
@@ -80,37 +72,36 @@ const yearOptions = computed(() => {
 
 
 const filteredPositionAttendanceRows = computed(() => {
-    const query = appliedSearchQuery.value.trim().toLowerCase()
+    const selectedMonth = monthsFilter.value
+    const selectedYear = yearsFilter.value
 
     return positionAttendanceRows.value.filter((row) => {
-        const rowMonth = new Date(row.dates).toLocaleString('default', { month: 'long' })
+        const rowDate = new Date(row.dates.split(' - ')[0])
+        const rowMonth = rowDate.toLocaleString('default', { month: 'long' })
+        const rowYear = rowDate.getFullYear().toString()
 
-        const matchesMonth =
-            !appliedMonthFilter.value || rowMonth === appliedMonthFilter.value
+        const matchesMonth = !selectedMonth || rowMonth === selectedMonth
+        const matchesYear = !selectedYear || rowYear === selectedYear
 
-        const matchesSearch =
-            !query ||
-            row.position.toLowerCase().includes(query) ||
-            row.fullName.toLowerCase().includes(query)
-
-        return matchesMonth && matchesSearch
+        return matchesMonth && matchesYear
     })
 })
-
 
 function handleBack() {
     emit('back')
 }
 
-function handleSearch() {
-    appliedSearchQuery.value = searchQuery.value
-    appliedMonthFilter.value = monthsFilter.value
-    appliedYearFilter.value = yearsFilter.value
+function clearFilters() {
+    monthsFilter.value = ''
+    yearsFilter.value = ''
 }
 
-function clearPositionFilter() {
-    monthsFilter.value = ''
-    appliedMonthFilter.value = ''
+function exportPdf() {
+    // placeholder for PDF export action
+}
+
+function exportExcel() {
+    // placeholder for Excel export action
 }
 </script>
 
@@ -123,37 +114,47 @@ function clearPositionFilter() {
             <h1 class="page-title">{{ attendance.department }} Attendance</h1>
         </div>
 
-        <form class="attendance-search" @submit.prevent="handleSearch">
-            
-
+        <div class="attendance-search">
             <div class="filter-control">
-                <div class="filter-dropdown">
-                    <FunnelIcon class="filter-icon" />
-                    <select v-model="monthsFilter" class="filter-select">
-                        <option value="">Select Month</option>
-                        <option v-for="month in monthOptions" :key="month" :value="month">
-                            {{ month }}
-                        </option>
-                    </select>
+                <div class="filter-row">
+                    <div class="filter-dropdown">
+                        <select v-model="monthsFilter" class="filter-select">
+                            <option value="">Select Month</option>
+                            <option v-for="month in monthOptions" :key="month" :value="month">
+                                {{ month }}
+                            </option>
+                        </select>
+                    </div>
 
-                    <select v-model="yearsFilter" class="filter-select">
-                        <option value="">Select Year</option>
-                        <option v-for="year in yearOptions" :key="year" :value="year.toString()">
-                            {{ year }}
-                        </option>
-                    </select>
+                    <div class="filter-dropdown filter-dropdown--icon">
+                        <FunnelIcon class="filter-icon" />
+                        <select v-model="yearsFilter" class="filter-select filter-select--with-icon">
+                            <option value="">Select Year</option>
+                            <option v-for="year in yearOptions" :key="year" :value="year.toString()">
+                                {{ year }}
+                            </option>
+                        </select>
+                    </div>
                 </div>
 
-                <button
-                    v-if="monthsFilter"
-                    type="button"
-                    class="clear-filter-button"
-                    @click="clearPositionFilter"
-                >
-                    Clear
-                </button>
+                <div class="filter-actions">
+                    <Button type="button" class="export-button export-button--pdf" @click="exportPdf">
+                        Export PDF
+                    </Button>
+                    <Button type="button" class="export-button export-button--excel" @click="exportExcel">
+                        Export Excel
+                    </Button>
+                    <button
+                        v-if="monthsFilter || yearsFilter"
+                        type="button"
+                        class="clear-filter-button"
+                        @click="clearFilters"
+                    >
+                        Clear
+                    </button>
+                </div>
             </div>
-        </form>
+        </div>
 
         <div class="form-divider" aria-hidden="true"></div>
 
@@ -161,43 +162,27 @@ function clearPositionFilter() {
             <table class="attendance-table">
                 <thead>
                     <tr>
-                        <th>Full Name</th>
-                        <th>Position</th>
+                        <th>Name</th>
                         <th>Total Present</th>
                         <th>Total Absent</th>
                         <th>Total Late</th>
-                        <th>Total Leave</th>
                         <th>Salary</th>
-                        <th>Net Worth</th>
+                        <th>Gross pay</th>
                         <th>Date</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr v-for="row in filteredPositionAttendanceRows" :key="row.id">
                         <td>{{ row.fullName }}</td>
-                        <td>{{ row.position }}</td>
                         <td>{{ row.totalPresent }}</td>
                         <td>{{ row.totalAbsent }}</td>
                         <td>{{ row.totalLate }}</td>
-                        <td>{{ row.totalLeave }}</td>
                         <td>{{ row.salary }}</td>
-                        <td>{{ row.netWorth }}</td>
+                        <td>{{ row.grossPay }}</td>
                         <td>{{ row.dates }}</td>
-
-
-                        <!-- <td>
-                            <button
-                                type="button"
-                                class="action-button action-button--subtle"
-                                :aria-label="`View ${row.fullName}`"
-                                @click="handleViewEmployee(row)"
-                            >
-                                <EyeIcon class="action-icon" />
-                            </button>
-                        </td> -->
                     </tr>
                     <tr v-if="!filteredPositionAttendanceRows.length">
-                        <td colspan="3" class="empty-state">No position attendance found.</td>
+                        <td colspan="7" class="empty-state">No position attendance found.</td>
                     </tr>
                 </tbody>
             </table>
@@ -243,17 +228,61 @@ function clearPositionFilter() {
 
 .attendance-search {
     display: grid;
-    grid-template-columns: minmax(240px, 360px) 100px auto;
-    align-items: center;
+    grid-template-columns: minmax(240px, 360px);
+    align-items: start;
     gap: 0.75rem;
     margin-bottom: 1rem;
 }
 
 .filter-control {
-    display: column;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    width: 100%;
+}
+
+.filter-row {
+    display: flex;
     align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.filter-actions {
+    display: grid;
+    grid-template-columns: 1fr;
     gap: 0.5rem;
-    flex-wrap: nowrap;
+}
+
+.export-button,
+.clear-filter-button {
+    width: 100%;
+}
+
+.export-button {
+    min-height: 36px;
+    padding: 8px 14px;
+    border-radius: 10px;
+    border: 1px solid transparent;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.export-button--pdf {
+    background: #fef2f2;
+    color: #991b1b;
+    border-color: #fecaca;
+}
+
+.export-button--excel {
+    background: #ecfdf5;
+    color: #047857;
+    border-color: #a7f3d0;
+}
+
+.export-button:hover {
+    filter: brightness(0.96);
 }
 
 .form-divider {
@@ -279,9 +308,17 @@ function clearPositionFilter() {
 
 .filter-dropdown {
     position: relative;
-    width: 100%;
+    display: flex;
+    align-items: center;
+    width: auto;
     min-width: 180px;
-    max-width: 240px;
+    max-width: 100%;
+}
+
+.filter-dropdown--icon {
+    position: relative;
+    width: 100%;
+    max-width: 260px;
 }
 
 .filter-select {
@@ -299,8 +336,64 @@ function clearPositionFilter() {
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236B7280' d='M2.5 4.5l3.5 3 3.5-3'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
     background-position: right 12px center;
-    padding-left: 32px;
     padding-right: 2rem;
+}
+
+.filter-select--with-icon {
+    padding-left: 36px;
+}
+
+@media (max-width: 820px) {
+    .attendance-search {
+        grid-template-columns: 1fr;
+        align-items: end;
+        width: 100%;
+    }
+
+    .filter-dropdown {
+        max-width: none;
+    }
+}
+
+@media (max-width: 540px) {
+    .attendance-search {
+        grid-template-columns: 1fr;
+        gap: 0.55rem;
+        align-items: stretch;
+    }
+
+    .filter-control {
+        width: 100%;
+    }
+
+    .filter-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .filter-dropdown,
+    .filter-dropdown--icon {
+        flex: 1 1 auto;
+        min-width: 0;
+        width: 100%;
+        max-width: none;
+    }
+
+    .filter-select {
+        width: 100%;
+        min-height: 44px;
+        font-size: 0.95rem;
+        padding: 10px 12px;
+    }
+
+    .filter-actions {
+        gap: 0.75rem;
+    }
+
+    .export-button,
+    .clear-filter-button {
+        width: 100%;
+    }
 }
 
 .filter-icon {
@@ -409,40 +502,4 @@ function clearPositionFilter() {
     color: #64748b;
 }
 
-@media (max-width: 900px) {
-    .attendance-search {
-        grid-template-columns: 1fr auto auto;
-        align-items: end;
-    }
-
-    .filter-dropdown {
-        max-width: none;
-    }
-}
-
-@media (max-width: 640px) {
-    .attendance-search {
-        grid-template-columns: 1fr;
-        gap: 0.55rem;
-        align-items: stretch;
-    }
-
-    .search-button,
-    .filter-control {
-        width: 100%;
-        max-width: none;
-    }
-
-    .filter-dropdown {
-        flex: 1 1 auto;
-        min-width: 0;
-        width: auto;
-    }
-
-    .search-button {
-        min-height: 38px;
-        font-size: 0.82rem;
-        justify-content: center;
-    }
-}
 </style>

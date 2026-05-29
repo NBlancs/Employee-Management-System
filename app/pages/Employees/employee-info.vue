@@ -2076,16 +2076,15 @@ onMounted(async () => {
   background: #fee2e2;
 }
 
-@media (max-width: 640px) {
-}
 
-@media (max-width: 1024px) {
-    .info-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+@media (max-width: 640px) {
+
+  .validation-alert-wrap{
+        top: 12px;
+        right: 12px;
+        width: calc(100vw - 24px);
     }
-}
 
-@media (max-width: 640px) {
     .form-card {
         padding: 1rem;
     }
