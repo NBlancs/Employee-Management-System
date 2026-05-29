@@ -130,8 +130,10 @@ async function loadDepartments() {
     sharedDepartmentRows.value = departmentsWithHeads
 }
 
-function deleteDepartment() {
-    if (!departmentToDelete.value) {
+async function deleteDepartment() {
+    if (!departmentToDelete.value) return
+    if (!transactedById.value) {
+        alert("Cannot delete: User not identified.")
         return
     }
 
@@ -140,31 +142,32 @@ function deleteDepartment() {
     isDeleteDepartmentModalOpen.value = false
     isDeleteDepartmentLoadingModalOpen.value = true
 
-    deleteDepartmentTimer = setTimeout(async () => {
-        try {
-            await $fetch(`/api/departments/${targetDepartmentId}`, { method: 'DELETE' })
-            await loadDepartments()
-        } catch (err) {
-            // ignore backend error and continue
-            sharedDepartmentRows.value = sharedDepartmentRows.value.filter((department) => department.id !== targetDepartmentId)
-        }
+    try {
+        await $fetch(`/api/departments/${targetDepartmentId}`, {
+            method: 'DELETE',
+            body: {
+                transacted_by: transactedById.value,
+            },
+        })
+
+        await loadDepartments()
 
         if (selectedDepartment.value?.id === targetDepartmentId) {
             selectedDepartment.value = null
         }
 
-        isDeleteDepartmentLoadingModalOpen.value = false
-        departmentToDelete.value = null
         isDepartmentDeletedAlertVisible.value = true
 
-        if (deleteSuccessAlertTimer) {
-            clearTimeout(deleteSuccessAlertTimer)
-        }
-
-        deleteSuccessAlertTimer = setTimeout(() => {
+        setTimeout(() => {
             isDepartmentDeletedAlertVisible.value = false
         }, 2600)
-    }, 1200)
+
+    } catch (err: any) {
+        alert(err?.data?.message || "Cannot delete department.")
+    } finally {
+        isDeleteDepartmentLoadingModalOpen.value = false
+        departmentToDelete.value = null
+    }
 }
 
 function handleAddDepartment() {
@@ -824,6 +827,7 @@ onUnmounted(() => {
     width: 100%;
     border-collapse: collapse;
     min-width: 760px;
+    overflow: hidden;
 }
 
 .departments-table th,
@@ -1088,7 +1092,7 @@ onUnmounted(() => {
   height: 14px;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 820px) {
     .department-search {
         grid-template-columns: 1fr auto auto;
         align-items: end;
@@ -1100,7 +1104,7 @@ onUnmounted(() => {
     }
 }
 
-@media (max-width: 640px) {
+@media (max-width: 540px) {
     .top-alert-wrap {
         top: 12px;
         right: 12px;

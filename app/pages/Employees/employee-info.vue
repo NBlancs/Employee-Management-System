@@ -99,7 +99,6 @@ const availableDepartmentPositions = computed(() => {
 
   return departments.value.find(department => department.department_id === selectedDepartmentId)?.positions ?? []
 })
-
 const availablePositions = computed(() => {
   return departments.value.flatMap(department => {
     return (department.positions ?? []).map(position => ({
@@ -107,6 +106,25 @@ const availablePositions = computed(() => {
       department_name: department.department_name,
     }))
   })
+})
+
+const employeeDepartmentPositions = computed(() => {
+  if (!employee.value.department) {
+    return []
+  }
+
+  const currentDepartment = departments.value.find(
+    dept => dept.department_name === employee.value.department
+  )
+
+  if (!currentDepartment || !currentDepartment.positions) {
+    return []
+  }
+
+  return currentDepartment.positions.map(position => ({
+    ...position,
+    department_name: currentDepartment.department_name,
+  }))
 })
 
 const mapBackendEmployee = (raw: any): EmployeeInfoRecord => {
@@ -608,8 +626,20 @@ function handleProceedUpdate() {
     return
   }
 
-  if (selectedUpdateOption.value === 'Department') {
-    showErrorAlert('You cannot update your department')
+  // ❗ Prevent admin from changing HIS OWN department/position
+  if (
+    selectedUpdateOption.value === 'Department' &&
+    employee.value.id === currentUser.value?.employeeId
+  ) {
+    showErrorAlert('You cannot update your own department and position')
+    return
+  }
+
+  if (
+    selectedUpdateOption.value === 'Position' &&
+    employee.value.id === currentUser.value?.employeeId
+  ) {
+    showErrorAlert('You cannot update your own position')
     return
   }
 
@@ -1195,6 +1225,7 @@ onMounted(async () => {
           <select v-model="selectedUpdateOption" class="update-option-select" aria-label="Select update option">
             <option value="" disabled>Select Update Option</option>
             <option value="Department">Department</option>
+            <option value="Position">Position</option>
             <option value="Password">Password</option>
             <option value="Shift-Time">Shift Time</option>
             <option value="Card">Card</option>
@@ -1267,11 +1298,11 @@ onMounted(async () => {
           <select id="newPositionSelect" v-model="selectedPositionUpdate" class="department-update-select" aria-label="New Position">
             <option value="" disabled>Select new position</option>
             <option
-              v-for="position in availablePositions"
+              v-for="position in employeeDepartmentPositions"
               :key="position.position_id"
               :value="String(position.position_id)"
             >
-              {{ position.position_name }} - {{ position.department_name }}
+              {{ position.position_name }}
             </option>
           </select>
         </div>

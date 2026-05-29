@@ -20,6 +20,12 @@ interface PositionAttendanceRow {
     fullName: string
     position: string
     salary: number
+    totalPresent: number
+    totalAbsent: number
+    totalLate: number
+    totalLeave: number
+    netWorth: number
+    dates: string
 }
 
 interface EmployeeAttendanceSummaryData extends AttendanceData {
@@ -39,46 +45,58 @@ const emit = defineEmits<{
 
 const searchQuery = ref('')
 const appliedSearchQuery = ref('')
-const positionFilter = ref('')
-const appliedPositionFilter = ref('')
+const monthsFilter = ref('')
+const yearsFilter = ref('')
+const appliedMonthFilter = ref('')
+const appliedYearFilter = ref('')
 
 const positionAttendanceRows = ref<PositionAttendanceRow[]>([
-    { id: 1, fullName: 'Callo, Je-ann', position: 'Manager', salary: 52000 },
-    { id: 2, fullName: 'Valle, Jayneth', position: 'Supervisor', salary: 42000 },
-    { id: 3, fullName: 'Lascuna, Joel Kent', position: 'Staff', salary: 28000 },
-    { id: 4, fullName: 'Maturan, Walter', position: 'Assistant', salary: 24000 },
+  { id: 1, fullName: 'Callo, Je-ann', position: 'Manager', salary: 52000, totalPresent: 20, totalAbsent: 5, totalLate: 3, totalLeave: 2, netWorth: 100000, dates: '2026-01-15 - 2026-01-30' },
+  { id: 2, fullName: 'Valle, Jayneth', position: 'Supervisor', salary: 42000, totalPresent: 18, totalAbsent: 7, totalLate: 4, totalLeave: 1, netWorth: 80000,dates: '2026-02-15 - 2026-02-30' },
+  { id: 3, fullName: 'Lascuna, Joel Kent', position: 'Staff', salary: 28000, totalPresent: 15, totalAbsent: 10, totalLate: 6, totalLeave: 3, netWorth: 60000, dates: '2026-03-15 - 2026-03-30' },
+  { id: 4, fullName: 'Maturan, Walter', position: 'Assistant', salary: 24000, totalPresent: 12, totalAbsent: 13, totalLate: 8, totalLeave: 4, netWorth: 50000, dates: '2026-04-15 - 2026-04-30' },
 ])
 
-const positionOptions = computed(() => {
-    return [...new Set(positionAttendanceRows.value.map((row) => row.position))]
+const monthOptions = [
+  'January','February','March','April','May','June',
+  'July','August','September','October','November','December'
+]
+
+const yearOptions = computed(() => {
+    const years = positionAttendanceRows.value.map(row =>
+        new Date(row.dates).getFullYear()
+    )
+
+    const minYear = Math.min(...years)
+    const maxYear = Math.max(...years)
+
+    const result: number[] = []
+    for (let y = minYear; y <= maxYear; y++) {
+        result.push(y)
+    }
+
+    return result
 })
+
 
 const filteredPositionAttendanceRows = computed(() => {
     const query = appliedSearchQuery.value.trim().toLowerCase()
 
     return positionAttendanceRows.value.filter((row) => {
-        const matchesPosition = !appliedPositionFilter.value || row.position === appliedPositionFilter.value
+        const rowMonth = new Date(row.dates).toLocaleString('default', { month: 'long' })
+
+        const matchesMonth =
+            !appliedMonthFilter.value || rowMonth === appliedMonthFilter.value
+
         const matchesSearch =
             !query ||
             row.position.toLowerCase().includes(query) ||
             row.fullName.toLowerCase().includes(query)
 
-        return matchesPosition && matchesSearch
+        return matchesMonth && matchesSearch
     })
 })
 
-function handleViewEmployee(row: PositionAttendanceRow) {
-    if (!props.attendance) {
-        return
-    }
-
-    emit('viewSummary', {
-        ...props.attendance,
-        fullName: row.fullName,
-        position: row.position,
-        salary: row.salary,
-    })
-}
 
 function handleBack() {
     emit('back')
@@ -86,12 +104,13 @@ function handleBack() {
 
 function handleSearch() {
     appliedSearchQuery.value = searchQuery.value
-    appliedPositionFilter.value = positionFilter.value
+    appliedMonthFilter.value = monthsFilter.value
+    appliedYearFilter.value = yearsFilter.value
 }
 
 function clearPositionFilter() {
-    positionFilter.value = ''
-    appliedPositionFilter.value = ''
+    monthsFilter.value = ''
+    appliedMonthFilter.value = ''
 }
 </script>
 
@@ -105,38 +124,28 @@ function clearPositionFilter() {
         </div>
 
         <form class="attendance-search" @submit.prevent="handleSearch">
-            <IconInput
-                v-model="searchQuery"
-                size="sm"
-                placeholder="Search employee"
-                aria-label="Search employee"
-            >
-                <template #icon>
-                    <MagnifyingGlassIcon class="search-icon" />
-                </template>
-            </IconInput>
-
-            <Button
-                type="submit"
-                variant="solid"
-                class="search-button"
-            >
-                Search
-            </Button>
+            
 
             <div class="filter-control">
                 <div class="filter-dropdown">
                     <FunnelIcon class="filter-icon" />
-                    <select v-model="positionFilter" class="filter-select" aria-label="Filter by position">
-                        <option value="">All Positions</option>
-                        <option v-for="position in positionOptions" :key="position" :value="position">
-                            {{ position }}
+                    <select v-model="monthsFilter" class="filter-select">
+                        <option value="">Select Month</option>
+                        <option v-for="month in monthOptions" :key="month" :value="month">
+                            {{ month }}
+                        </option>
+                    </select>
+
+                    <select v-model="yearsFilter" class="filter-select">
+                        <option value="">Select Year</option>
+                        <option v-for="year in yearOptions" :key="year" :value="year.toString()">
+                            {{ year }}
                         </option>
                     </select>
                 </div>
 
                 <button
-                    v-if="positionFilter"
+                    v-if="monthsFilter"
                     type="button"
                     class="clear-filter-button"
                     @click="clearPositionFilter"
@@ -154,14 +163,29 @@ function clearPositionFilter() {
                     <tr>
                         <th>Full Name</th>
                         <th>Position</th>
-                        <th class="actions-column">Action</th>
+                        <th>Total Present</th>
+                        <th>Total Absent</th>
+                        <th>Total Late</th>
+                        <th>Total Leave</th>
+                        <th>Salary</th>
+                        <th>Net Worth</th>
+                        <th>Date</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr v-for="row in filteredPositionAttendanceRows" :key="row.id">
                         <td>{{ row.fullName }}</td>
                         <td>{{ row.position }}</td>
-                        <td>
+                        <td>{{ row.totalPresent }}</td>
+                        <td>{{ row.totalAbsent }}</td>
+                        <td>{{ row.totalLate }}</td>
+                        <td>{{ row.totalLeave }}</td>
+                        <td>{{ row.salary }}</td>
+                        <td>{{ row.netWorth }}</td>
+                        <td>{{ row.dates }}</td>
+
+
+                        <!-- <td>
                             <button
                                 type="button"
                                 class="action-button action-button--subtle"
@@ -170,7 +194,7 @@ function clearPositionFilter() {
                             >
                                 <EyeIcon class="action-icon" />
                             </button>
-                        </td>
+                        </td> -->
                     </tr>
                     <tr v-if="!filteredPositionAttendanceRows.length">
                         <td colspan="3" class="empty-state">No position attendance found.</td>
@@ -226,7 +250,7 @@ function clearPositionFilter() {
 }
 
 .filter-control {
-    display: inline-flex;
+    display: column;
     align-items: center;
     gap: 0.5rem;
     flex-wrap: nowrap;

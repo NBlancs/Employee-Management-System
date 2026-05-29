@@ -142,12 +142,22 @@ function confirmDelete() {
             emit('deleteEmployee', employeeIdToDelete.value)
         } else {
             try {
-                await $fetch(`/api/employees/${employeeIdToDelete.value}`, { method: 'DELETE' })
-            } catch (err) {
-                // ignore backend error and continue
-            }
+                const actorId = currentUser.value?.employeeId
+                if (!actorId) {
+                    showDeleteError('You must be signed in to delete employees.')
+                    deleteLoadingModal.value = false
+                    return
+                }
 
-            sharedEmployeeRows.value = sharedEmployeeRows.value.filter(employee => employee.id !== employeeIdToDelete.value)
+                await $fetch(`/api/employees/${employeeIdToDelete.value}?transacted_by=${actorId}`, { method: 'DELETE' })
+
+                // Only remove from UI if backend delete succeeded
+                sharedEmployeeRows.value = sharedEmployeeRows.value.filter(employee => employee.id !== employeeIdToDelete.value)
+            } catch (err) {
+                // show backend error and do not remove from UI
+                const message = (err as any)?.data?.message || (err as any)?.message || 'Failed to delete employee.'
+                showDeleteError(message)
+            }
         }
 
         employeeIdToDelete.value = null
