@@ -16,6 +16,8 @@ interface TransactionRow {
     dateValue: string
 }
 
+const config = useRuntimeConfig()
+
 const searchQuery = ref('')
 const selectedDate = ref('')
 const transactionRows = ref<TransactionRow[]>([])
@@ -42,18 +44,24 @@ const filteredTransactionRows = computed(() => {
     })
 })
 
+type TransactionResponse = {
+    data: TransactionRow[]
+}
+
 async function loadTransactions() {
     try {
         isLoading.value = true
-        const response = await $fetch<{ success: boolean; data: TransactionRow[] }>('/api/transactions')
-        const data = response?.data || []
 
-        if (Array.isArray(data)) {
-            transactionRows.value = data
-        }
+        const response = await $fetch<TransactionResponse>(
+            `${config.public.apiBaseUrl}/transactions`
+        )
+
+        const data = response.data ?? []
+
+        transactionRows.value = Array.isArray(data) ? data : []
+
     } catch (error) {
         console.error('Failed to load transactions:', error)
-        // Fallback to empty array
         transactionRows.value = []
     } finally {
         isLoading.value = false
