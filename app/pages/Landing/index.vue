@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import Landing from './landing.vue'
+await navigateTo('/landing')
 </script>
 
 <template>
