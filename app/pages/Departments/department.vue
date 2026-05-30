@@ -86,8 +86,15 @@ let successAlertTimer: ReturnType<typeof setTimeout> | null = null
 let deleteDepartmentTimer: ReturnType<typeof setTimeout> | null = null
 let deleteSuccessAlertTimer: ReturnType<typeof setTimeout> | null = null
 
-const sharedDepartmentRows = useState<DepartmentRow[]>('departments-table-rows', () => [])
-
+// const sharedDepartmentRows = useState<DepartmentRow[]>('departments-table-rows', () => [])
+const sharedDepartmentRows = ref<DepartmentRow[]>([
+    {
+        id: 1,
+        name: 'Human Resources',
+        head: 'Dela Cruz, Juan'
+    }
+  
+])
 
 function handleViewDepartment(department: { id: number; name: string; head: string }) {
     selectedDepartment.value = department

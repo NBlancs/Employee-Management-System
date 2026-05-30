@@ -1,58 +1,92 @@
 export default defineNuxtRouteMiddleware((to) => {
+  // const authCookie = useCookie<string | null>('ems_auth')
+  // const userCookie = useCookie<string | null>('ems_user')
+  // const isAuthenticated = authCookie.value === 'true'
+  // const path = to.path.toLowerCase()
+
+  // const parseUserCookie = () => {
+  //   if (!userCookie.value) {
+  //     return null
+  //   }
+
+  //   try {
+  //     return JSON.parse(userCookie.value) as { role?: string; department?: string }
+  //   } catch {
+  //     return null
+  //   }
+  // }
+
+  // const currentUser = parseUserCookie()
+  // const userRole = currentUser?.role?.toLowerCase() ?? ''
+  // const userDepartment = currentUser?.department?.toLowerCase() ?? ''
+
+  // const isAllowedDepartmentAndPosition = (): boolean => {
+  //   const isHRDepartment =
+  //     userDepartment.includes('human resources') || userDepartment.includes('hr')
+
+  //   const allowedPositions = [
+  //     'department head',
+  //     'chief human resources officer',
+  //     'hr generalist',
+  //     'admin',
+  //   ]
+
+  //   const isAllowedPosition = allowedPositions.includes(userRole)
+
+  //   return isHRDepartment && isAllowedPosition
+  // }
+
+  // const isAllowedRole = isAllowedDepartmentAndPosition()
+
+  // const isMainRoute = path === '/main' || path.startsWith('/main/')
+  // const isLandingRoute = path === '/landing' || path === '/'
+
+  // if (isAuthenticated && !isAllowedRole) {
+  //   authCookie.value = null
+  //   userCookie.value = null
+  //   return navigateTo('/landing')
+  // }
+
+  // if (isMainRoute && (!isAuthenticated || !isAllowedRole)) {
+  //   return navigateTo('/landing')
+  // }
+
+  // if (isLandingRoute && isAuthenticated) {
+  //   return navigateTo('/main')
+  // }
+  
   const authCookie = useCookie<string | null>('ems_auth')
   const userCookie = useCookie<string | null>('ems_user')
-  const isAuthenticated = authCookie.value === 'true'
+
+  // Create a fake authenticated user if none exists
+  if (!authCookie.value || !userCookie.value) {
+    authCookie.value = 'true'
+
+    userCookie.value = JSON.stringify({
+      employeeId: 1,
+      accountId: 1,
+      username: 'admin',
+      firstName: 'Demo',
+      middleName: '',
+      lastName: 'User',
+      suffix: '',
+      displayName: 'Demo User',
+      role: 'admin',
+      department: 'Human Resources',
+    })
+  }
+
   const path = to.path.toLowerCase()
-
-  const parseUserCookie = () => {
-    if (!userCookie.value) {
-      return null
-    }
-
-    try {
-      return JSON.parse(userCookie.value) as { role?: string; department?: string }
-    } catch {
-      return null
-    }
-  }
-
-  const currentUser = parseUserCookie()
-  const userRole = currentUser?.role?.toLowerCase() ?? ''
-  const userDepartment = currentUser?.department?.toLowerCase() ?? ''
-
-  const isAllowedDepartmentAndPosition = (): boolean => {
-    const isHRDepartment =
-      userDepartment.includes('human resources') || userDepartment.includes('hr')
-
-    const allowedPositions = [
-      'department head',
-      'chief human resources officer',
-      'hr generalist',
-      'admin',
-    ]
-
-    const isAllowedPosition = allowedPositions.includes(userRole)
-
-    return isHRDepartment && isAllowedPosition
-  }
-
-  const isAllowedRole = isAllowedDepartmentAndPosition()
+  const isAuthenticated = authCookie.value === 'true'
 
   const isMainRoute = path === '/main' || path.startsWith('/main/')
   const isLandingRoute = path === '/landing' || path === '/'
 
-  if (isAuthenticated && !isAllowedRole) {
-    authCookie.value = null
-    userCookie.value = null
-    return navigateTo('/landing')
-  }
-
-  if (isMainRoute && (!isAuthenticated || !isAllowedRole)) {
+  if (isMainRoute && !isAuthenticated) {
     return navigateTo('/landing')
   }
 
   if (isLandingRoute && isAuthenticated) {
     return navigateTo('/main')
   }
- 
 })
