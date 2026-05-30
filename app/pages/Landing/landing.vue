@@ -10,9 +10,74 @@ const passwordError = ref('')
 const loginStatusText = ref('')
 const isSigningIn = ref(false)
 const loginButtonText = ref('Sign In')
-const authCookie = useCookie<string | null>('ems_auth')
-const userCookie = useCookie<string | null>('ems_user')
-const config = useRuntimeConfig()
+// const authCookie = useCookie<string | null>('ems_auth')
+// const userCookie = useCookie<string | null>('ems_user')
+// const config = useRuntimeConfig()
+
+// async function onSubmit() {
+//   usernameError.value = ''
+//   passwordError.value = ''
+
+//   if (!username.value.trim()) {
+//     usernameError.value = 'Username is required.'
+//   }
+
+//   if (!password.value.trim()) {
+//     passwordError.value = 'Password is required.'
+//   }
+
+//   if (usernameError.value || passwordError.value) {
+//     return
+//   }
+
+//   // start button state
+//   loginStatusText.value = ''
+//   isSigningIn.value = true
+//   loginButtonText.value = 'Signing In'
+
+//   try {
+//     const response = await $fetch<{ success: boolean; data: {
+//       employeeId: number
+//       accountId: number
+//       username: string
+//       firstName: string
+//       middleName: string
+//       lastName: string
+//         suffix: string
+//       displayName: string
+//       role: string
+//       department: string
+//     } }>(`${config.public.apiBaseUrl}/api/auth/login`, {
+//       method: 'POST',
+//       body: {
+//         username: username.value,
+//         password: password.value,
+//       },
+//     })
+
+//     authCookie.value = 'true'
+//     userCookie.value = JSON.stringify({
+//       employeeId: response.data.employeeId,
+//       accountId: response.data.accountId,
+//       username: response.data.username,
+//       firstName: response.data.firstName,
+//       middleName: response.data.middleName,
+//       lastName: response.data.lastName,
+//         suffix: response.data.suffix,
+//       displayName: response.data.displayName,
+//       role: response.data.role,
+//       department: response.data.department,
+//     })
+
+//     await navigateTo('/main?login=success&tab=overview')
+//   } catch (error: any) {
+//     authCookie.value = null
+//     userCookie.value = null
+//     loginStatusText.value = error?.data?.message || 'Invalid username or password. Please try again.'
+//     isSigningIn.value = false
+//     loginButtonText.value = 'Sign In'
+//   }
+// }
 
 async function onSubmit() {
   usernameError.value = ''
@@ -30,53 +95,14 @@ async function onSubmit() {
     return
   }
 
-  // start button state
   loginStatusText.value = ''
   isSigningIn.value = true
   loginButtonText.value = 'Signing In'
 
-  try {
-    const response = await $fetch<{ success: boolean; data: {
-      employeeId: number
-      accountId: number
-      username: string
-      firstName: string
-      middleName: string
-      lastName: string
-        suffix: string
-      displayName: string
-      role: string
-      department: string
-    } }>(`${config.public.apiBaseUrl}/api/auth/login`, {
-      method: 'POST',
-      body: {
-        username: username.value,
-        password: password.value,
-      },
-    })
-
-    authCookie.value = 'true'
-    userCookie.value = JSON.stringify({
-      employeeId: response.data.employeeId,
-      accountId: response.data.accountId,
-      username: response.data.username,
-      firstName: response.data.firstName,
-      middleName: response.data.middleName,
-      lastName: response.data.lastName,
-        suffix: response.data.suffix,
-      displayName: response.data.displayName,
-      role: response.data.role,
-      department: response.data.department,
-    })
-
+  // simulate loading
+  setTimeout(async () => {
     await navigateTo('/main?login=success&tab=overview')
-  } catch (error: any) {
-    authCookie.value = null
-    userCookie.value = null
-    loginStatusText.value = error?.data?.message || 'Invalid username or password. Please try again.'
-    isSigningIn.value = false
-    loginButtonText.value = 'Sign In'
-  }
+  }, 1000)
 }
 
 definePageMeta({
