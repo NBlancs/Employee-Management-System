@@ -42,9 +42,36 @@ const dashboardStats = ref<DashboardStats>({
 })
 const isStatsLoading = ref(true)
 
-const recentAttendances = ref<RecentAttendance[]>([])
+// const recentAttendances = ref<RecentAttendance[]>([])
+const recentAttendances = ref<RecentAttendance[]>([
+  {
+    fullName: 'Callo, Je-ann',
+    status: 'Present',
+    timeIn: '8:03 AM'
+  },
+  {
+    fullName: 'Maturan, Walter, B.',
+    status: 'Late',
+    timeIn: '8:15 AM'
+  },
+  
+])
 
-const recentTransactions = ref<RecentTransaction[]>([])
+// const recentTransactions = ref<RecentTransaction[]>([])
+const recentTransactions = ref<RecentTransaction[]>([
+  {
+    reference: 'TRX-20240901-001',
+    type: 'Leave Application',
+    firstName: 'Je-ann',
+    dateTime: 'Sep 1, 2024, 9:30 AM'
+  },
+  {
+    reference: 'TRX-20240901-002',
+    type: 'Overtime Request',
+    firstName: 'Walter',
+    dateTime: 'Sep 1, 2024, 10:15 AM'
+  }
+])
 
 
 const currentDate = new Date().toLocaleDateString(undefined, {
