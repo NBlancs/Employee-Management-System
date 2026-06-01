@@ -1,8 +1,0 @@
-const Button_vue_vue_type_style_index_0_scoped_e46fb0d0_lang = ".app-button[data-v-e46fb0d0]{align-items:center;background-color:#fff;border:1px solid #d1d5db;border-radius:10px;color:#374151;display:inline-flex;gap:8px;justify-content:center;margin-inline:auto;padding:10px 18px;transform:translateY(0) scale(1);transition:transform .14s ease,box-shadow .2s ease;will-change:transform}.app-button--solid[data-v-e46fb0d0]{background-color:#635bff;border-color:#635bff;color:#fff}.app-button--outline[data-v-e46fb0d0]{background-color:#fff;border-color:#d1d5db;color:#374151}.app-button--subtle[data-v-e46fb0d0]{background-color:#f3f4f6;border-color:transparent;color:#374151}.app-button--block[data-v-e46fb0d0]{margin-inline:0;width:100%}.app-button[data-v-e46fb0d0]:hover{cursor:pointer}.app-button[data-v-e46fb0d0]:active{transform:translateY(1px) scale(.97)}.app-button[data-v-e46fb0d0]:disabled,.app-button[aria-disabled=true][data-v-e46fb0d0]{cursor:not-allowed;opacity:.65;transform:none}.app-button__icon[data-v-e46fb0d0]{line-height:1}";
-
-const ButtonStyles_BIirl0bu = [
-  Button_vue_vue_type_style_index_0_scoped_e46fb0d0_lang
-];
-
-export { ButtonStyles_BIirl0bu as default };
-//# sourceMappingURL=Button-styles.BIirl0bu.mjs.map

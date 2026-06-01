@@ -1,1 +1,0 @@
-import{d as a,N as o,K as s,n as _,f as c,z as r}from"./xh9lChY7.js";const l=a({__name:"index",async setup(i){let n,e;return[n,e]=o(()=>_("/landing")),await n,e(),(p,m)=>{const t=c("Landing");return r(),s(t)}}});export{l as default};
