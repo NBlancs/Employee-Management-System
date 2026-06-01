@@ -175,17 +175,17 @@ function confirmDelete() {
 }
 
 
-const sharedEmployeeRows = useState<EmployeeRow[]>('employees-table-rows', () => [])
-// const sharedEmployeeRows = useState<EmployeeRow[]>('employees-table-rows', () => [
-//   {
-//     id: 1,
-//     name: 'Maturan, Walter, B.',
-//     department: 'Human Resources',
-//     cardStatus: 'Has Card',
-//     cardNumber: '1234567890',
-//   },
+// const sharedEmployeeRows = useState<EmployeeRow[]>('employees-table-rows', () => [])
+const sharedEmployeeRows = useState<EmployeeRow[]>('employees-table-rows', () => [
+  {
+    id: 1,
+    name: 'Maturan, Walter, B.',
+    department: 'Human Resources',
+    cardStatus: 'Has Card',
+    cardNumber: '1234567890',
+  },
   
-// ])
+])
 const userCookie = useCookie<string | null>('ems_user')
 
 type LoggedInUser = {
