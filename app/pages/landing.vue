@@ -1,7 +1,3 @@
 <script setup lang="ts">
 await navigateTo('/Landing')
 </script>
-
-<template>
-  <Landing />
-</template>

@@ -83,10 +83,10 @@ export default defineNuxtRouteMiddleware((to) => {
   const isLandingRoute = path === '/landing' || path === '/'
 
   if (isMainRoute && !isAuthenticated) {
-    return navigateTo('/landing')
+    return navigateTo('/Landing')
   }
 
   if (isLandingRoute && isAuthenticated) {
-    return navigateTo('/main')
+    return navigateTo('/Main')
   }
 })

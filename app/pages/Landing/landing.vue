@@ -101,7 +101,7 @@ async function onSubmit() {
 
   // simulate loading
   setTimeout(async () => {
-    await navigateTo('/main?login=success&tab=overview')
+    await navigateTo('/Main?login=success&tab=overview')
   }, 1000)
 }
 
