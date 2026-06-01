@@ -1,7 +1,7 @@
 <script setup lang="ts">
-await navigateTo('/Landing')
+import LandingPage from './landing.vue'
 </script>
 
 <template>
-  <Landing />
+  <LandingPage />
 </template>
