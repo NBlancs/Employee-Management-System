@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { authenticateDummy } from '~/utils/dummyAuth'
 
 const username = ref('')
 const password = ref('')
@@ -7,22 +8,6 @@ const errorMessage = ref('')
 const isSigningIn = ref(false)
 const authCookie = useCookie<string | null>('ems_auth')
 const userCookie = useCookie<string | null>('ems_user')
-
-type LoginPayload = {
-  success: boolean
-  data: {
-    employeeId: number
-    accountId: number
-    username: string
-    firstName: string
-    middleName: string
-    lastName: string
-    suffix: string
-    displayName: string
-    role: string
-    department: string
-  }
-}
 
 async function onSubmit() {
   errorMessage.value = ''
@@ -34,25 +19,22 @@ async function onSubmit() {
 
   isSigningIn.value = true
 
-  try {
-    const response = await $fetch<LoginPayload>('/api/auth/login', {
-      method: 'POST',
-      body: {
-        username: username.value,
-        password: password.value,
-      },
-    })
+  await new Promise((resolve) => setTimeout(resolve, 400))
 
-    authCookie.value = 'true'
-    userCookie.value = JSON.stringify(response.data)
-    await navigateTo('/main?login=success&tab=overview')
-  } catch (error: any) {
+  const result = authenticateDummy(username.value, password.value)
+
+  if (!result.ok) {
     authCookie.value = null
     userCookie.value = null
-    errorMessage.value = error?.data?.message || 'Invalid username or password.'
-  } finally {
+    errorMessage.value = result.message
     isSigningIn.value = false
+    return
   }
+
+  authCookie.value = 'true'
+  userCookie.value = JSON.stringify(result.user)
+  isSigningIn.value = false
+  await navigateTo('/main?login=success&tab=overview')
 }
 </script>
 
@@ -60,7 +42,8 @@ async function onSubmit() {
   <main class="landing">
     <section class="card">
       <h1>Employee Management System</h1>
-      <p>Sign in to continue</p>
+      <p>Sign in to continue (demo mode, no backend)</p>
+      <p class="hint">Demo: <strong>admin</strong> / <strong>admin123</strong></p>
 
       <form @submit.prevent="onSubmit">
         <label for="username">Username</label>
@@ -135,6 +118,11 @@ button {
 button:disabled {
   opacity: 0.7;
   cursor: not-allowed;
+}
+
+.hint {
+  font-size: 0.85rem;
+  color: #64748b;
 }
 
 .error {

@@ -26,10 +26,8 @@ export default defineNuxtConfig({
 
   runtimeConfig: {
     public: {
-      apiBaseUrl:
-        process.env.NUXT_PUBLIC_API_BASE_URL ||
-        process.env.API_BASE_URL ||
-        (process.env.NODE_ENV === 'production' ? '' : 'http://localhost:5000')
-    }
-  }
+      // Optional: only needed if you re-enable server API proxy to a real backend.
+      apiBaseUrl: process.env.NUXT_PUBLIC_API_BASE_URL || '',
+    },
+  },
 })
