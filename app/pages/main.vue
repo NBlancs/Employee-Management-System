@@ -1,3 +1,7 @@
 <script setup lang="ts">
-await navigateTo('/Main')
+import MainPage from './Main/index.vue'
 </script>
+
+<template>
+  <MainPage />
+</template>

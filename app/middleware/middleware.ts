@@ -1,7 +1,6 @@
 export default defineNuxtRouteMiddleware((to) => {
   const authCookie = useCookie<string | null>('ems_auth')
   const userCookie = useCookie<string | null>('ems_user')
-  const isAuthenticated = authCookie.value === 'true'
   const path = to.path.toLowerCase()
 
   const parseUserCookie = () => {
@@ -17,6 +16,7 @@ export default defineNuxtRouteMiddleware((to) => {
   }
 
   const currentUser = parseUserCookie()
+  const isAuthenticated = authCookie.value === 'true' && !!currentUser
   const userRole = currentUser?.role?.toLowerCase() ?? ''
   const userDepartment = currentUser?.department?.toLowerCase() ?? ''
 
@@ -47,46 +47,15 @@ export default defineNuxtRouteMiddleware((to) => {
     return navigateTo('/landing')
   }
 
+  if (authCookie.value === 'true' && !currentUser) {
+    authCookie.value = null
+    userCookie.value = null
+  }
+
   if (isMainRoute && (!isAuthenticated || !isAllowedRole)) {
     return navigateTo('/landing')
   }
 
-  if (isLandingRoute && isAuthenticated) {
-    return navigateTo('/main')
-  }
-  
-  // const authCookie = useCookie<string | null>('ems_auth')
-  // const userCookie = useCookie<string | null>('ems_user')
-
-  // // Create a fake authenticated user if none exists
-  // if (!authCookie.value || !userCookie.value) {
-  //   authCookie.value = 'true'
-
-  //   userCookie.value = JSON.stringify({
-  //     employeeId: 1,
-  //     accountId: 1,
-  //     username: 'admin',
-  //     firstName: 'Demo',
-  //     middleName: '',
-  //     lastName: 'User',
-  //     suffix: '',
-  //     displayName: 'Demo User',
-  //     role: 'admin',
-  //     department: 'Human Resources',
-  //   })
-  // }
-
-  // const path = to.path.toLowerCase()
-  // const isAuthenticated = authCookie.value === 'true'
-
-  // const isMainRoute = path === '/main' || path.startsWith('/main/')
-  // const isLandingRoute = path === '/landing' || path === '/'
-
-  // if (isMainRoute && !isAuthenticated) {
-  //   return navigateTo('/Landing')
-  // }
-
-  // if (isLandingRoute && isAuthenticated) {
-  //   return navigateTo('/Main')
-  // }
+  // Keep landing accessible even when authenticated (helps local/dev flows).
+ 
 })

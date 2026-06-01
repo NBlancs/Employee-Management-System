@@ -187,7 +187,7 @@ async function confirmLogout() {
   authCookie.value = null
   userCookie.value = null
   isLoggingOutOpen.value = false
-  await navigateTo('/Landing')
+  await navigateTo('/landing')
 }
 
 onMounted(() => {

@@ -79,32 +79,6 @@ async function onSubmit() {
   }
 }
 
-// async function onSubmit() {
-//   usernameError.value = ''
-//   passwordError.value = ''
-
-//   if (!username.value.trim()) {
-//     usernameError.value = 'Username is required.'
-//   }
-
-//   if (!password.value.trim()) {
-//     passwordError.value = 'Password is required.'
-//   }
-
-//   if (usernameError.value || passwordError.value) {
-//     return
-//   }
-
-//   loginStatusText.value = ''
-//   isSigningIn.value = true
-//   loginButtonText.value = 'Signing In'
-
-//   // simulate loading
-//   setTimeout(async () => {
-//     await navigateTo('/main?login=success&tab=overview')
-//   }, 1000)
-// }
-
 
 definePageMeta({
   middleware: 'middleware',
