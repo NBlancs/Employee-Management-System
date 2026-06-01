@@ -1094,6 +1094,12 @@ onUnmounted(() => {
     }
 }
 
+@media (max-width: 480px) {
+    .shift-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
 .confirmation-content {
     display: grid;
     grid-template-columns: 1fr;
