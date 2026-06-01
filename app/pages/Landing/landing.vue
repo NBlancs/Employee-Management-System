@@ -79,10 +79,6 @@ async function onSubmit() {
   }
 }
 
-
-definePageMeta({
-  middleware: 'middleware',
-})
 </script>
 
 <template>
