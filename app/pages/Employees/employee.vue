@@ -184,6 +184,35 @@ const sharedEmployeeRows = useState<EmployeeRow[]>('employees-table-rows', () =>
     cardStatus: 'Has Card',
     cardNumber: '1234567890',
   },
+
+  {
+    id: 2, 
+    name: 'Callo, Je-ann',
+    department: 'Information Technology',
+    cardStatus: 'No Card',
+    cardNumber: '',
+  },
+  {
+    id: 3, 
+    name: 'Lascuña, Joel Kent, P.',
+    department: 'Network Administration',
+    cardStatus: 'Has Card',
+    cardNumber: '9876543210',
+  },
+  {
+    id: 4, 
+    name: 'Valle, Jayneth Hazel, C.',
+    department: 'Finance',
+    cardStatus: 'No Card',
+    cardNumber: '',
+  },
+  {
+    id: 5, 
+    name: 'Galanida, Filemon Jr., L.',
+    department: 'Cyber Security',
+    cardStatus: 'Has Card',
+    cardNumber: '5555555555',
+  }
   
 ])
 const userCookie = useCookie<string | null>('ems_user')
