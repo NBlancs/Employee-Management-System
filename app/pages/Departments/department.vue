@@ -387,7 +387,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-    <div class="department-page">
+    <div class="department-page page-with-fab">
         <div class="top-alert-wrap">
             <Alert
                 v-model:visible="isDuplicateDepartmentAlertVisible"
@@ -462,7 +462,7 @@ onUnmounted(() => {
             <Button
                 variant="solid"
                 type="button"
-                class="add-button"
+                class="add-button floating-action-btn"
                 aria-label="Add Department"
                 @click="handleAddDepartment"
             >
@@ -668,7 +668,6 @@ onUnmounted(() => {
     width: 100%;
     max-width: 100%;
     min-width: 0;
-    padding-bottom: 5.5rem;
 }
 
 .top-alert-wrap {
@@ -711,10 +710,6 @@ onUnmounted(() => {
 }
 
 .add-button {
-    position: fixed;
-    right: 24px;
-    bottom: 24px;
-    z-index: 30;
     margin-inline: 0;
     width: 56px;
     min-height: 56px;
@@ -822,10 +817,6 @@ onUnmounted(() => {
     to {
         transform: rotate(360deg);
     }
-}
-
-.actions-column {
-    width: 150px;
 }
 
 .action-buttons {
@@ -1131,8 +1122,6 @@ onUnmounted(() => {
         width: 52px;
         height: 52px;
         min-height: 52px;
-        right: 16px;
-        bottom: 16px;
         border-radius: 999px;
         padding: 0;
     }

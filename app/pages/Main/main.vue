@@ -170,6 +170,14 @@ function toggleSidebar() {
   isMobileNavHidden.value = !isMobileNavHidden.value
 }
 
+function hideMobileNav() {
+  if (!isMobileScreen.value || isMobileNavHidden.value) {
+    return
+  }
+
+  isMobileNavHidden.value = true
+}
+
 function openLogoutConfirm() {
   isLogoutConfirmOpen.value = true
 }
@@ -332,7 +340,7 @@ onUnmounted(() => {
       </template>
     </Modal>
 
-    <div class="main-shell">
+    <div class="main-shell" @click="hideMobileNav">
       <header class="main-header">
         <div class="header-left">
           <button
@@ -340,7 +348,7 @@ onUnmounted(() => {
             class="sidebar-toggle-btn"
             type="button"
             :aria-label="isMobileNavHidden ? 'Show side navigation icons' : 'Hide side navigation'"
-            @click="toggleSidebar"
+            @click.stop="toggleSidebar"
           >
             <Bars3Icon class="sidebar-toggle-icon" aria-hidden="true" />
           </button>
@@ -379,24 +387,38 @@ onUnmounted(() => {
 }
 
 .logout-btn {
-  border: 1px solid transparent;
-  border-radius: 10px;
-  padding: 8px 14px;
-  cursor: pointer;
-  font-weight: 500;
+    border: 1px solid transparent;
+    border-radius: 10px;
+    padding: 8px 16px;
+    min-height: 36px;
+    cursor: pointer;
+    font-size: 0.875rem;
+    font-weight: 600;
+    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
 }
 
 .logout-btn--no {
-  border-color: #d1d5db;
-  background: #ffffff;
-  color: #374151;
-  margin-right: 8px;
+    background: #eff6ff;
+    border-color: #dbeafe;
+    color: #1d4ed8;
+}
+
+.logout-btn--no:hover {
+    background: #dbeafe;
+    border-color: #bfdbfe;
+    color: #1e40af;
 }
 
 .logout-btn--yes {
-  border-color: #ef4444;
-  background: #ef4444;
-  color: #ffffff;
+    background: #fef2f2;
+    border-color: #fecaca;
+    color: #b91c1c;
+}
+
+.logout-btn--yes:hover {
+    background: #fee2e2;
+    border-color: #fca5a5;
+    color: #991b1b;
 }
 
 .logout-loading {

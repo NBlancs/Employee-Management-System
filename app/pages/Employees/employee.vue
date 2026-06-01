@@ -378,7 +378,7 @@ onUnmounted(() => {
 
 
 <template>
-    <div class="employee-page">
+    <div class="employee-page page-with-fab">
         <h1 class="employee-title">Employee Management</h1>
 
         <form class="employee-search" @submit.prevent="onSearch">
@@ -496,7 +496,7 @@ onUnmounted(() => {
 
         <button
             type="button"
-            class="floating-add-button"
+            class="floating-add-button floating-action-btn"
             aria-label="Add employee"
             @click="handleAddEmployee"
         >
@@ -630,10 +630,6 @@ onUnmounted(() => {
     height: 180px;
     border-bottom: 0 !important;
     padding: 0 !important;
-}
-
-.actions-column {
-    width: 180px;
 }
 
 .action-buttons {
@@ -874,9 +870,6 @@ onUnmounted(() => {
 }
 
 .floating-add-button {
-    position: fixed;
-    right: 24px;
-    bottom: 24px;
     width: 52px;
     height: 52px;
     border: 0;
@@ -888,7 +881,6 @@ onUnmounted(() => {
     justify-content: center;
     box-shadow: 0 12px 28px rgba(22, 163, 74, 0.28);
     cursor: pointer;
-    z-index: 20;
 }
 
 .floating-add-button:hover {
@@ -902,8 +894,6 @@ onUnmounted(() => {
 
 @media (max-width: 640px) {
     .floating-add-button {
-        right: 16px;
-        bottom: 16px;
         width: 46px;
         height: 46px;
     }

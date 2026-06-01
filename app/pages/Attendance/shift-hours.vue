@@ -424,7 +424,7 @@ function formatTimeTo12Hour(timeString: string): string {
 </script>
 
 <template>
-    <section class="shift-hours-page">
+    <section class="shift-hours-page page-with-fab">
         <div v-if="showSuccessAlert" class="shift-hours-alert-wrap">
             <Alert
                 title="Success"
@@ -492,7 +492,7 @@ function formatTimeTo12Hour(timeString: string): string {
             </table>
         </div>
 
-        <button class="floating-button" @click="addShiftHours">
+        <button class="floating-button floating-action-btn" type="button" aria-label="Add shift hours" @click="addShiftHours">
             <PlusIcon class="floating-button-icon" />
         </button>
     </section>
@@ -727,10 +727,6 @@ function formatTimeTo12Hour(timeString: string): string {
     margin-top: 1rem;
 }
 
-.actions-column {
-    width: 100px
-}
-
 .action-button {
     border: 1px solid #d1d5db;
     border-radius: 8px;
@@ -766,9 +762,6 @@ function formatTimeTo12Hour(timeString: string): string {
 }
 
 .floating-button {
-    position: fixed;
-    bottom: 24px;
-    right: 24px;
     width: 48px;
     height: 48px;
     border-radius: 50%;
@@ -1136,8 +1129,6 @@ function formatTimeTo12Hour(timeString: string): string {
     }
 
     .floating-button {
-        right: 16px;
-        bottom: 16px;
         width: 44px;
         height: 44px;
     }

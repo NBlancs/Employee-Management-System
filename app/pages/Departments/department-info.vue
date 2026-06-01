@@ -786,7 +786,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-    <div class="department-info-page">
+    <div class="department-info-page page-with-fab">
         <div class="top-alert-wrap">
             <Alert
                 v-model:visible="isPositionAddedAlertVisible"
@@ -924,7 +924,7 @@ onUnmounted(() => {
 
         <button
             type="button"
-            class="fab-add-position"
+            class="fab-add-position floating-action-btn"
             aria-label="Add position"
             title="Add Position"
             @click="handleAddPosition"
@@ -1324,9 +1324,6 @@ onUnmounted(() => {
 }
 
 .fab-add-position {
-    position: fixed;
-    right: 1.25rem;
-    bottom: 1.25rem;
     width: 3.25rem;
     height: 3.25rem;
     border: none;
@@ -1340,7 +1337,6 @@ onUnmounted(() => {
     line-height: 1;
     box-shadow: 0 12px 24px rgba(37, 99, 235, 0.28);
     cursor: pointer;
-    z-index: 30;
     transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
 }
 
@@ -1658,8 +1654,6 @@ onUnmounted(() => {
     .fab-add-position {
         width: 3rem;
         height: 3rem;
-        right: 1rem;
-        bottom: 1rem;
     }
 
     .salary-option-grid {

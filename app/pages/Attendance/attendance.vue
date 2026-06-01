@@ -330,10 +330,6 @@ function onViewShiftHours() {
     height: 14px;
 }
 
-.actions-column {
-    width: 100px;
-}
-
 .action-button {
     width: 28px;
     height: 28px;

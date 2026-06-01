@@ -394,10 +394,6 @@ function exportExcel() {
 }
 
 
-.actions-column {
-    width: 110px;
-}
-
 .action-button {
     width: 30px;
     height: 30px;

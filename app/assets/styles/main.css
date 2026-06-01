@@ -16,6 +16,9 @@
     --action-btn-font-size: 0.85rem;
     --action-btn-font-weight: 600;
     --action-btn-radius: 10px;
+    --fab-size: 52px;
+    --fab-gap: 24px;
+    --fab-safe-space: calc(var(--fab-size) + var(--fab-gap) + 16px);
 }
 
 *{
@@ -277,6 +280,19 @@ body{
     color: #6b7280;
 }
 
+.ems-table-wrap .actions-column,
+.positions-table-wrap .actions-column,
+.employees-table-wrap .actions-column,
+.departments-table-wrap .actions-column,
+.transactions-table-wrap .actions-column,
+.attendance-table-wrap .actions-column,
+.shift-hours-table-wrap .actions-column,
+.table-wrap .actions-column {
+    width: 1%;
+    white-space: nowrap;
+    vertical-align: middle;
+}
+
 .ems-table-wrap :is(tbody tr:last-child td),
 .positions-table-wrap :is(tbody tr:last-child td),
 .employees-table-wrap :is(tbody tr:last-child td),
@@ -317,6 +333,34 @@ body{
 .date-input--with-icon,
 .department-select.filter-select--with-icon {
     padding-left: var(--filter-icon-padding-left) !important;
+}
+
+/* Floating action button – keep table actions clickable */
+.page-with-fab {
+    padding-bottom: var(--fab-safe-space);
+}
+
+.page-with-fab .ems-table-wrap,
+.page-with-fab .shift-hours-table-wrap,
+.page-with-fab .table-wrap {
+    scroll-padding-bottom: var(--fab-gap);
+    padding-bottom: var(--fab-gap);
+    box-sizing: border-box;
+}
+
+.floating-action-btn {
+    position: fixed;
+    z-index: 20;
+    bottom: var(--fab-gap);
+    right: var(--fab-gap);
+}
+
+@media (max-width: 640px) {
+    :root {
+        --fab-size: 46px;
+        --fab-gap: 16px;
+        --fab-safe-space: calc(var(--fab-size) + var(--fab-gap) + 20px);
+    }
 }
 
 /* Shared action button sizing (Search, Export PDF/Excel, etc.) */
