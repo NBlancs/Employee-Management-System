@@ -381,22 +381,36 @@ onUnmounted(() => {
 .logout-btn {
   border: 1px solid transparent;
   border-radius: 10px;
-  padding: 8px 14px;
+  padding: 8px 16px;
   cursor: pointer;
   font-weight: 500;
+  font-size: 0.9rem;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 
 .logout-btn--no {
-  border-color: #d1d5db;
-  background: #ffffff;
-  color: #374151;
+  border-color: #bfdbfe;
+  background: #eff6ff;
+  color: #1d4ed8;
   margin-right: 8px;
 }
 
+.logout-btn--no:hover {
+  background: #dbeafe;
+  border-color: #93c5fd;
+  color: #1e40af;
+}
+
 .logout-btn--yes {
-  border-color: #ef4444;
-  background: #ef4444;
-  color: #ffffff;
+  border-color: #fecaca;
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.logout-btn--yes:hover {
+  background: #fee2e2;
+  border-color: #fca5a5;
+  color: #991b1b;
 }
 
 .logout-loading {

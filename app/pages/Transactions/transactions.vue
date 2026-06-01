@@ -16,8 +16,6 @@ interface TransactionRow {
     dateValue: string
 }
 
-const config = useRuntimeConfig()
-
 const searchQuery = ref('')
 const selectedDate = ref('')
 const transactionRows = ref<TransactionRow[]>([])
@@ -52,9 +50,7 @@ async function loadTransactions() {
     try {
         isLoading.value = true
 
-        const response = await $fetch<TransactionResponse>(
-            `${config.public.apiBaseUrl}/transactions`
-        )
+        const response = await $fetch<TransactionResponse>('/api/transactions')
 
         const data = response.data ?? []
 
