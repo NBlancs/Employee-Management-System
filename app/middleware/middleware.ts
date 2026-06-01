@@ -44,7 +44,9 @@ export default defineNuxtRouteMiddleware((to) => {
   if (isAuthenticated && !isAllowedRole) {
     authCookie.value = null
     userCookie.value = null
-    return navigateTo('/landing')
+    if (isMainRoute) {
+      return navigateTo('/landing')
+    }
   }
 
   if (authCookie.value === 'true' && !currentUser) {
