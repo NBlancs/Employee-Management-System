@@ -190,8 +190,10 @@ onMounted(() => {
 }
 
 .date-input {
-    width: 220px;
-    flex: 0 0 220px;
+    width: auto;
+    flex: 1 1 180px;
+    min-width: 0;
+    max-width: 280px;
     min-height: 36px;
     border-radius: 10px;
     border: 1px solid #d1d5db;
@@ -245,7 +247,7 @@ onMounted(() => {
 
 :deep(.transactions-table .app-table) {
     width: 100%;
-    min-width: 720px;
+    min-width: var(--table-min-width);
     border-collapse: collapse;
 }
 
@@ -297,29 +299,41 @@ onMounted(() => {
 }
 
 @media (max-width: 640px) {
+    /* Stack filters; keep Search button at the bottom */
     .transaction-search {
-        grid-template-columns: 1fr;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
         gap: 0.5rem;
-        width: 220px;
+        width: fit-content;
+        max-width: min(100%, var(--filter-stack-width));
     }
 
-    .search-button {
-        width: 100%;
-        min-height: 38px;
-        padding: 8px 10px;
-        font-size: 0.82rem;
+    .search-input-wrap {
+        order: 1;
+        width: var(--filter-stack-width);
+        max-width: 100%;
     }
 
     .date-field {
-        width: 100%;
+        order: 2;
+        width: var(--filter-stack-width);
         max-width: 100%;
         justify-content: flex-start;
     }
 
     .date-input {
-        width: auto;
-        flex: 1 1 auto;
-        min-width: 0;
+        width: 100%;
+        max-width: var(--control-width);
+    }
+
+    .search-button {
+        order: 3;
+        width: var(--search-btn-width);
+        min-height: 44px;
+        padding: 8px 12px;
+        font-size: 0.92rem;
+        align-self: flex-start;
     }
 
     .transaction-title {
@@ -327,7 +341,7 @@ onMounted(() => {
     }
 
     :deep(.transactions-table .app-table) {
-        min-width: 640px;
+        min-width: var(--table-min-width);
     }
 }
 

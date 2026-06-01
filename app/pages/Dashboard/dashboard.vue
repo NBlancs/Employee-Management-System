@@ -391,13 +391,14 @@ onUnmounted(() => {
   .overview-grid {
     grid-template-columns: 1fr;
     gap: 1rem;
-    width: 300px;
+    width: 100%;
+    max-width: 100%;
   }
 
   .dashboard h1 {
     font-size: 1.05rem;
-    width: 300px;
-
+    width: 100%;
+    max-width: 100%;
   }
 
   #recent-attendance,
@@ -412,8 +413,10 @@ onUnmounted(() => {
   .recent-attendance-header {
     margin-top: 0.75rem;
     margin-bottom: 0.5rem;
-    width: 300px;
-
+    width: 100%;
+    max-width: 100%;
+    flex-wrap: wrap;
+    gap: 8px;
   }
 
   .recent-attendance-table :deep(table),

@@ -732,7 +732,7 @@ function formatTimeTo12Hour(timeString: string): string {
 
 .shift-hours-table {
     width: 100%;
-    min-width: 500px;
+    min-width: var(--table-min-width);
     border-collapse: collapse;
 }
 
@@ -1143,6 +1143,63 @@ function formatTimeTo12Hour(timeString: string): string {
 @keyframes spin {
     to {
         transform: rotate(360deg);
+    }
+}
+
+@media (max-width: 820px) {
+    .shift-hours-alert-wrap {
+        top: 12px;
+        right: 12px;
+        width: min(100%, calc(100vw - 24px));
+    }
+
+    .shift-hours-title {
+        font-size: 0.95rem;
+    }
+}
+
+@media (max-width: 640px) {
+    .shift-hours-header {
+        flex-wrap: wrap;
+    }
+
+    .shift-hours-table {
+        min-width: var(--table-min-width);
+    }
+
+    .floating-button {
+        right: 16px;
+        bottom: 16px;
+        width: 44px;
+        height: 44px;
+    }
+
+    .floating-button-icon {
+        width: 20px;
+        height: 20px;
+    }
+
+    .delete-modal__actions {
+        flex-wrap: wrap;
+    }
+
+    .delete-modal__button {
+        flex: 1 1 auto;
+        min-width: 96px;
+    }
+}
+
+@media (max-width: 480px) {
+    .shift-hours-table th,
+    .shift-hours-table td {
+        padding: 10px 12px;
+        font-size: 0.8rem;
+    }
+
+    .action-button {
+        padding: 5px 8px;
+        font-size: 0.75rem;
+        margin-right: 4px;
     }
 }
 </style>

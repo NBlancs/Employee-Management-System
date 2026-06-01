@@ -10,7 +10,7 @@ const HOP_BY_HOP_HEADERS = new Set([
 
 const getBackendBaseUrl = (event: H3Event): string => {
   const config = useRuntimeConfig(event);
-  const baseUrl = config.public.apiBaseUrl || 'http://localhost:5000';
+  const baseUrl = config.public.apiBaseUrl;
 
   if (!baseUrl) {
     throw createError({

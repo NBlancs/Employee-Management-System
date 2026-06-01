@@ -2077,6 +2077,27 @@ onMounted(async () => {
 }
 
 
+@media (max-width: 1024px) {
+    .info-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .shift-container {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .employee-info-header {
+        flex-wrap: wrap;
+    }
+
+    .info-grid,
+    .info-grid--two {
+        grid-template-columns: 1fr;
+    }
+}
+
 @media (max-width: 640px) {
 
   .validation-alert-wrap{
@@ -2091,6 +2112,24 @@ onMounted(async () => {
 
     .info-grid,
     .info-grid--two {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 480px) {
+    .shift-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .success-alert-wrap{
+        top: 12px;
+        right: 12px;
+        width: calc(100vw - 24px);
+    }
+}
+
+@media (max-width: 280px) {
+    .shift-grid {
         grid-template-columns: 1fr;
     }
 }

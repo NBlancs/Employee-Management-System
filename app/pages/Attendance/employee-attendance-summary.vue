@@ -240,7 +240,9 @@ onUnmounted(() => {
 
 .date-input {
     min-height: 38px;
-    min-width: 220px;
+    min-width: 0;
+    width: 100%;
+    max-width: 280px;
     padding: 8px 10px;
     border: 1px solid #d1d5db;
     border-radius: 10px;
@@ -298,7 +300,7 @@ onUnmounted(() => {
 
 .summary-table {
     width: 100%;
-    min-width: 560px;
+    min-width: var(--table-min-width);
     border-collapse: collapse;
 }
 
@@ -404,7 +406,32 @@ onUnmounted(() => {
     }
 
     .summary-table {
-        min-width: 500px;
+        min-width: var(--table-min-width);
+    }
+
+    .summary-filters {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .date-field,
+    .date-input,
+    .search-button,
+    .clear-button {
+        width: 100%;
+    }
+
+    .date-input {
+        min-width: 0;
+    }
+
+    .search-button,
+    .clear-button {
+        min-height: 44px;
+    }
+
+    .summary-title {
+        font-size: 1rem;
     }
 }
 </style>

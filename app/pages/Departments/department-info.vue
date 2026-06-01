@@ -1676,9 +1676,22 @@ onUnmounted(() => {
 
     .department-search {
         flex-direction: column;
-        width: 220px;
+        width: fit-content;
+        max-width: min(100%, var(--filter-stack-width));
     }
 
+    .department-search :deep(.icon-input) {
+        width: var(--filter-stack-width);
+        max-width: 100%;
+    }
+
+    .department-search .search-button {
+        width: var(--search-btn-width);
+        min-height: 44px;
+        font-size: 0.92rem;
+        margin-left: 0;
+        align-self: flex-start;
+    }
 
 }
 </style>

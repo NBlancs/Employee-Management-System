@@ -4,6 +4,7 @@ import Alert from '~/components/Alert.vue'
 import Modal from '~/components/Modal.vue'
 import {
   ArrowLeftOnRectangleIcon,
+  Bars3Icon,
   ShieldCheckIcon,
   ClockIcon,
   BellIcon,
@@ -61,8 +62,12 @@ const now = ref(new Date())
 const showSignInAlert = ref(false)
 const isLogoutConfirmOpen = ref(false)
 const isLoggingOutOpen = ref(false)
+const isMobileScreen = ref(false)
+const isMobileNavHidden = ref(false)
 let timer: ReturnType<typeof setInterval> | null = null
 let alertTimer: ReturnType<typeof setTimeout> | null = null
+let mediaQuery: MediaQueryList | null = null
+let mediaQueryListener: (() => void) | null = null
 
 // Check for login success query parameter
 const loginQuery = getTabFromQuery(route.query.login)
@@ -139,6 +144,11 @@ watch(() => route.query.tab, (newTab) => {
 function setActiveTab(id: string) {
   activeTab.value = id
 
+  // Facebook-style mobile behavior: collapse sidebar after selecting a nav item
+  if (isMobileScreen.value) {
+    isMobileNavHidden.value = true
+  }
+
   void router.replace({
     path: route.path,
     query: {
@@ -150,6 +160,14 @@ function setActiveTab(id: string) {
 }
 
 function toggleNotifications() {
+}
+
+function toggleSidebar() {
+  if (!isMobileScreen.value) {
+    return
+  }
+
+  isMobileNavHidden.value = !isMobileNavHidden.value
 }
 
 function openLogoutConfirm() {
@@ -173,6 +191,20 @@ async function confirmLogout() {
 }
 
 onMounted(() => {
+  mediaQuery = window.matchMedia('(max-width: 820px)')
+
+  const syncMobileState = () => {
+    isMobileScreen.value = mediaQuery?.matches ?? false
+
+    if (!isMobileScreen.value) {
+      isMobileNavHidden.value = false
+    }
+  }
+
+  mediaQueryListener = syncMobileState
+  syncMobileState()
+  mediaQuery.addEventListener('change', mediaQueryListener)
+
   timer = setInterval(() => {
     now.value = new Date()
   }, 1000)
@@ -195,6 +227,10 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  if (mediaQuery && mediaQueryListener) {
+    mediaQuery.removeEventListener('change', mediaQueryListener)
+  }
+
   if (timer) {
     clearInterval(timer)
   }
@@ -206,7 +242,13 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="main-page">
+  <div
+    class="main-page"
+    :class="{
+      'main-page--mobile': isMobileScreen,
+      'main-page--mobile-nav-hidden': isMobileScreen && isMobileNavHidden
+    }"
+  >
     <div class="signin-alert-wrap">
       <Alert
         v-if="showSignInAlert"
@@ -292,7 +334,18 @@ onUnmounted(() => {
 
     <div class="main-shell">
       <header class="main-header">
-        <h1>{{ currentTabLabel }}</h1>
+        <div class="header-left">
+          <button
+            v-if="isMobileScreen"
+            class="sidebar-toggle-btn"
+            type="button"
+            :aria-label="isMobileNavHidden ? 'Show side navigation icons' : 'Hide side navigation'"
+            @click="toggleSidebar"
+          >
+            <Bars3Icon class="sidebar-toggle-icon" aria-hidden="true" />
+          </button>
+          <h1>{{ currentTabLabel }}</h1>
+        </div>
         <div class="header-right">
           <div class="date-time" aria-live="polite">
             <span class="date-text">{{ formattedDate }}</span>
@@ -384,6 +437,7 @@ onUnmounted(() => {
   background: linear-gradient(135deg, #f8fafc 0%, #eef2ff 100%);
   color: #0f172a;
   overflow: hidden;
+  transition: grid-template-columns 0.22s ease;
 }
 
 .main-sidebar {
@@ -392,6 +446,7 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  transition: width 0.22s ease, opacity 0.18s ease, border-color 0.22s ease;
 }
 
 .brand-block {
@@ -566,6 +621,37 @@ onUnmounted(() => {
   backdrop-filter: blur(6px);
 }
 
+.header-left {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.sidebar-toggle-btn {
+  border: 1px solid #dbe4ff;
+  background: #ffffff;
+  color: #334155;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.sidebar-toggle-btn:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+.sidebar-toggle-icon {
+  width: 18px;
+  height: 18px;
+}
+
 .header-right {
   display: flex;
   align-items: center;
@@ -672,69 +758,87 @@ onUnmounted(() => {
   overflow-y: auto;
 }
 
+.main-page--mobile {
+  grid-template-columns: 76px minmax(0, 1fr);
+}
+
+.main-page--mobile .main-sidebar {
+  border-right: 1px solid #dbe4ff;
+  border-bottom: 0;
+  gap: 10px;
+  justify-content: space-between;
+}
+
+.main-page--mobile .main-nav,
+.main-page--mobile .sidebar-footer {
+  grid-template-columns: 1fr;
+  gap: 4px;
+  padding: 0 8px;
+}
+
+.main-page--mobile .brand-block {
+  padding: 10px 8px;
+  justify-content: center;
+}
+
+.main-page--mobile .user-block {
+  justify-content: center;
+  flex: 0 0 auto;
+}
+
+.main-page--mobile .user-info {
+  display: none;
+}
+
+.main-page--mobile .avatar {
+  width: 40px;
+  height: 40px;
+  font-size: 0.8rem;
+}
+
+.main-page--mobile .sidebar-divider {
+  margin: 0 8px;
+}
+
+.main-page--mobile .nav-item {
+  justify-content: center;
+  padding: 10px 8px;
+  border-left: 0;
+  border-bottom: 3px solid transparent;
+}
+
+.main-page--mobile .nav-item span {
+  display: none;
+}
+
+.main-page--mobile .nav-item--active {
+  border-bottom-color: #635bff;
+  border-left-color: transparent;
+}
+
+.main-page--mobile-nav-hidden {
+  grid-template-columns: 0 minmax(0, 1fr);
+}
+
+.main-page--mobile-nav-hidden .main-sidebar {
+  width: 0;
+  min-width: 0;
+  border-right: 0;
+  overflow: hidden;
+  visibility: hidden;
+  opacity: 0;
+}
+
+.main-page--mobile-nav-hidden .main-shell {
+  width: 100%;
+  min-width: 0;
+}
+
 @media (max-width: 820px) {
   .signin-alert-wrap {
     top: 10px;
     right: 10px;
     width: min(320px, calc(100vw - 20px));
-  }
-
-  .main-page {
-    grid-template-columns: 76px minmax(0, 1fr);
-  }
-
-  .main-sidebar {
-    border-right: 1px solid #dbe4ff;
-    border-bottom: 0;
-    gap: 10px;
-    justify-content: space-between;
-  }
-
-  .main-nav,
-  .sidebar-footer {
-    grid-template-columns: 1fr;
-    gap: 4px;
-    padding: 0 8px;
-  }
-
-  .brand-block {
-    padding: 10px 8px;
-    justify-content: center;
-  }
-
-  .user-block {
-    justify-content: center;
-    flex: 0 0 auto;
-  }
-
-  .user-info {
-    display: none;
-  }
-
-  .avatar {
-    width: 40px;
-    height: 40px;
-    font-size: 0.8rem;
-  }
-
-  .sidebar-divider {
-    margin: 0 8px;
-  }
-
-  .nav-item {
-    justify-content: center;
-    padding: 10px 8px;
-    border-left: 0;
-    border-bottom: 3px solid transparent;
-  }
-
-  .nav-item span {
-    display: none;
-  }
-
-  .nav-item--active {
-    border-bottom-color: #635bff;
-    border-left-color: transparent;
   }
 
   .date-time {
@@ -745,6 +849,72 @@ onUnmounted(() => {
     display: block;
     font-size: 0.66rem;
     white-space: nowrap;
+  }
+
+  .main-content {
+    padding: 16px;
+  }
+}
+
+@media (max-width: 640px) {
+  .main-header {
+    padding: 12px 14px;
+    gap: 10px;
+  }
+
+  .main-header h1 {
+    font-size: 1.05rem;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .main-content {
+    padding: 12px;
+    gap: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .main-page--mobile {
+    grid-template-columns: 64px minmax(0, 1fr);
+  }
+
+  /* Keep full-width content when sidebar is hidden on very small screens */
+  .main-page--mobile.main-page--mobile-nav-hidden {
+    grid-template-columns: 0 minmax(0, 1fr);
+  }
+
+  .main-header {
+    padding: 10px 12px;
+  }
+
+  .main-header h1 {
+    font-size: 0.95rem;
+  }
+
+  .date-text {
+    display: none;
+  }
+
+  .main-content {
+    padding: 10px;
+  }
+
+  .avatar {
+    width: 36px;
+    height: 36px;
+    font-size: 0.72rem;
+  }
+
+  .nav-item {
+    padding: 8px 6px;
+  }
+
+  .nav-item__icon {
+    width: 16px;
+    height: 16px;
   }
 }
 </style>

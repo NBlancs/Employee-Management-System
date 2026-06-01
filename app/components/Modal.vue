@@ -107,6 +107,9 @@ function openModal() {
 
 .app-modal {
   width: min(100%, 420px);
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  margin: auto;
   border-radius: 14px;
   background: #ffffff;
   box-shadow: 0 20px 40px -24px rgba(0, 0, 0, 0.5);
@@ -176,5 +179,20 @@ function openModal() {
 .modal-fade-enter-from,
 .modal-fade-leave-to {
   opacity: 0;
+}
+
+@media (max-width: 640px) {
+  .app-modal__overlay {
+    padding: 12px;
+  }
+
+  .app-modal {
+    width: min(100%, calc(100vw - 24px));
+    max-height: calc(100dvh - 24px);
+  }
+
+  .app-modal__title {
+    font-size: 1rem;
+  }
 }
 </style>

@@ -1,8 +1,26 @@
+:root {
+    --bp-xs: 480px;
+    --bp-sm: 640px;
+    --bp-md: 768px;
+    --bp-lg: 820px;
+    --bp-xl: 1024px;
+    --page-padding: clamp(12px, 3vw, 20px);
+    --control-width: clamp(180px, 32vw, 280px);
+    --control-width-wide: clamp(200px, 42vw, 360px);
+    --filter-stack-width: clamp(220px, 78vw, 380px);
+    --search-btn-width: 112px;
+    --table-min-width: clamp(520px, 92vw, 780px);
+}
+
 *{
     margin: 0;
     padding: 0;
     box-sizing: border-box;
     font-family: 'Poppins', sans-serif;
+}
+
+html {
+    overflow-x: hidden;
 }
 
 body{
@@ -63,7 +81,7 @@ body{
 
 .left-side h1{
     color: #635bff;
-    font-size: 2rem;
+    font-size: clamp(1.35rem, 4vw, 2rem);
 }
 
 .left-side p{
@@ -193,6 +211,9 @@ body{
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    width: var(--search-btn-width);
+    min-width: var(--search-btn-width);
+    max-width: var(--search-btn-width);
     transition: width 0.2s ease, padding 0.2s ease;
 }
 
@@ -205,7 +226,9 @@ body{
         display: grid;
         grid-template-columns: 1fr;
         gap: 0.75rem;
-        align-items: stretch;
+        align-items: start;
+        width: fit-content;
+        max-width: min(100%, var(--filter-stack-width));
     }
 
     .employee-search .department-and-card-filters,
@@ -219,25 +242,30 @@ body{
     .employee-search .department-dropdown,
     .employee-search .filter-select,
     .attendance-search .department-dropdown,
-    .transaction-search .department-dropdown {
-        width: 100% !important;
+    .transaction-search .department-dropdown,
+    .attendance-search .date-input,
+    .attendance-search .department-select,
+    .transaction-search .date-input,
+    .department-search .filter-dropdown,
+    .view-department-attendance-page .filter-dropdown {
+        width: var(--filter-stack-width) !important;
         max-width: 100% !important;
     }
 
     .search-button {
-        width: 100% !important;
+        width: var(--search-btn-width) !important;
+        min-width: 88px !important;
         min-height: 44px !important;
         padding: 8px 12px !important;
         border-radius: 12px !important;
         white-space: nowrap !important;
         overflow: hidden !important;
-        color: white!important;
+        color: white !important;
         position: relative !important;
         margin-inline: 0 !important;
         font-size: 0.92rem !important;
-        justify-self: stretch !important;
+        justify-self: start !important;
         text-indent: 0 !important;
-
     }
 }
 

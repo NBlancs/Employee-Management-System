@@ -232,7 +232,9 @@ function onViewShiftHours() {
 
 .date-input {
     min-height: 38px;
-    min-width: 220px;
+    min-width: 0;
+    width: 100%;
+    max-width: 280px;
     padding: 8px 10px;
     border: 1px solid #d1d5db;
     border-radius: 10px;
@@ -250,8 +252,9 @@ function onViewShiftHours() {
 
 .department-select {
     min-height: 38px;
-    min-width: 220px;
-    width: 220px;
+    min-width: 180px;
+    width: auto;
+    max-width: 100%;
     padding: 8px 12px;
     border: 1px solid #d1d5db;
     border-radius: 10px;
@@ -330,7 +333,7 @@ function onViewShiftHours() {
 
 .attendance-table {
     width: 100%;
-    min-width: 780px;
+    min-width: var(--table-min-width);
     border-collapse: collapse;
 }
 
@@ -393,9 +396,11 @@ function onViewShiftHours() {
 
 @media (max-width: 640px) {
     .attendance-search {
-        align-items: stretch;
-        justify-content: center;
-        width: 220px;
+        flex-direction: column;
+        align-items: flex-start;
+        justify-content: flex-start;
+        width: fit-content;
+        max-width: min(100%, var(--filter-stack-width));
     }
 
     .date-field,
@@ -403,12 +408,13 @@ function onViewShiftHours() {
     .search-button,
     .view-shift-hours-button {
         margin-left: 0;
-        width: 220px;
-        max-width: 220px;
+        width: var(--filter-stack-width);
+        max-width: 100%;
     }
 
     .date-input {
         width: 100%;
+        max-width: var(--control-width);
     }
 
     .department-filter-control {
@@ -419,20 +425,29 @@ function onViewShiftHours() {
 
     .department-select {
         width: 100%;
+        max-width: var(--control-width);
         min-width: 0;
     }
 
     .clear-filter-button {
         width: 100%;
+        max-width: var(--control-width);
     }
 
     .attendance-table {
-        min-width: 680px;
+        min-width: var(--table-min-width);
     }
 
     .search-button {
-        min-height: 38px;
-        font-size: 0.82rem;
+        min-height: 44px;
+        font-size: 0.92rem;
+        width: var(--search-btn-width);
     }
+
+    /* Button order: Date -> Department -> View -> Search (bottom) */
+    .date-field { order: 1; }
+    .department-field { order: 2; }
+    .view-shift-hours-button { order: 3; }
+    .search-button { order: 4; }
 }
 </style>

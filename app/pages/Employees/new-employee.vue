@@ -1092,6 +1092,15 @@ onUnmounted(() => {
     .new-employee-title {
         font-size: 1.1rem;
     }
+
+    .form-footer {
+        flex-direction: column-reverse;
+        align-items: stretch;
+    }
+
+    .submit-button {
+        width: 100%;
+    }
 }
 
 @media (max-width: 480px) {

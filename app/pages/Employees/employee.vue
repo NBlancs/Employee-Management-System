@@ -630,7 +630,7 @@ onUnmounted(() => {
 .employees-table {
     width: 100%;
     border-collapse: collapse;
-    min-width: 720px;
+    min-width: var(--table-min-width);
 }
 
 .employees-table th,
@@ -735,8 +735,8 @@ onUnmounted(() => {
 @media (max-width: 1024px) {
     .employee-search {
         grid-template-columns: 1fr auto;
-        width: 220px;
-        flex-direction: grid;
+        width: fit-content;
+        max-width: 100%;
     }
 }
 
@@ -747,7 +747,8 @@ onUnmounted(() => {
     }
 
     .department-dropdown {
-        width: 100%;
+        width: var(--control-width-wide);
+        max-width: 100%;
     }
 
     .search-button {
@@ -758,43 +759,49 @@ onUnmounted(() => {
 }
 
 @media (max-width: 640px) {
+    /* Stack filters; keep Search button at the bottom */
     .employee-search {
-        grid-template-columns: 1fr;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
         gap: 0.5rem;
-        justify-items: center;
+        width: fit-content;
+        max-width: min(100%, var(--filter-stack-width));
     }
 
-    .employee-search > * {
-        width: 220px;
-        max-width: 220px;
-    }
-
-    .search-button {
-        width: 220px;
-        min-height: 38px;
-        padding: 8px 10px;
-        font-size: 0.82rem;
+    .employee-search :deep(.icon-input) {
+        order: 1;
+        width: var(--filter-stack-width);
+        max-width: 100%;
     }
 
     .department-and-card-filters {
-        width: 220px;
+        order: 2;
+        width: var(--filter-stack-width);
+        max-width: 100%;
+    }
+
+    .search-button {
+        order: 3;
+        width: var(--search-btn-width);
+        min-height: 44px;
+        padding: 8px 12px;
+        font-size: 0.92rem;
+        align-self: flex-start;
     }
 
     .department-filter-control {
-        width: 100%;
+        width: auto;
+        max-width: 100%;
         flex-direction: column;
-        align-items: stretch;
+        align-items: flex-start;
     }
 
     .department-dropdown,
     .filter-select,
     .clear-filter-button {
-        width: 100% !important;
+        width: var(--control-width) !important;
         max-width: 100% !important;
-    }
-
-    .department-dropdown {
-        width: 100%;
     }
 
     .employee-title {
@@ -802,7 +809,7 @@ onUnmounted(() => {
     }
 
     .employees-table {
-        min-width: 640px;
+        min-width: var(--table-min-width);
     }
 }
 
@@ -885,7 +892,8 @@ onUnmounted(() => {
 
 @media (max-width: 768px) {
     .department-and-card-filters {
-        width: 100%;
+        width: auto;
+        max-width: 100%;
         flex-wrap: wrap;
         align-items: flex-start;
     }
@@ -895,7 +903,8 @@ onUnmounted(() => {
     }
 
     .card-filters {
-        width: 100%;
+        width: auto;
+        max-width: 100%;
         justify-content: flex-start;
         flex-wrap: wrap;
         row-gap: 0.6rem;

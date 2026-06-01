@@ -441,7 +441,7 @@ function exportExcel() {
 
 .attendance-table {
     width: 100%;
-    min-width: 700px;
+    min-width: var(--table-min-width);
     border-collapse: collapse;
 }
 

@@ -834,7 +834,7 @@ onUnmounted(() => {
 .departments-table {
     width: 100%;
     border-collapse: collapse;
-    min-width: 760px;
+    min-width: var(--table-min-width);
     overflow: hidden;
 }
 
@@ -1104,7 +1104,7 @@ onUnmounted(() => {
     .department-search {
         grid-template-columns: 1fr auto auto;
         align-items: end;
-        width: 220px;
+        width: 100%;
     }
 
     .filter-dropdown {
@@ -1128,30 +1128,37 @@ onUnmounted(() => {
     }
 
     .department-search {
-        grid-template-columns: 1fr;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
         gap: 0.55rem;
-        align-items: stretch;
+        width: fit-content;
+        max-width: min(100%, var(--filter-stack-width));
     }
 
     .search-button,
     .add-button,
     .department-filter-control {
-        width: 100%;
-        max-width: none;
+        width: var(--filter-stack-width);
+        max-width: 100%;
     }
 
     .filter-dropdown {
-        flex: 1 1 auto;
-        min-width: 0;
-        width: auto;
+        width: 100%;
+        max-width: var(--control-width-wide);
     }
 
     .search-button,
     .add-button {
-        min-height: 38px;
-        font-size: 0.82rem;
+        min-height: 44px;
+        font-size: 0.92rem;
         justify-content: center;
     }
+
+    /* Keep Search at the bottom of the stacked filters */
+    .department-search :deep(.icon-input) { order: 1; width: var(--filter-stack-width); max-width: 100%; }
+    .department-filter-control { order: 2; }
+    .search-button { order: 3; width: var(--search-btn-width); align-self: flex-start; }
 
     .add-button {
         width: 52px;
@@ -1169,7 +1176,7 @@ onUnmounted(() => {
     }
 
     .departments-table {
-        min-width: 640px;
+        min-width: var(--table-min-width);
     }
 
     .departments-table th,
