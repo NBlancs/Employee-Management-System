@@ -608,6 +608,7 @@ onUnmounted(() => {
   grid-template-rows: auto 1fr;
   background-color: white;
   min-height: 0;
+  min-width: 0;
 }
 
 .main-header {
@@ -755,7 +756,9 @@ onUnmounted(() => {
   display: grid;
   gap: 16px;
   min-height: 0;
+  min-width: 0;
   overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .main-page--mobile {

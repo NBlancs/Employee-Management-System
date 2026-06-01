@@ -138,7 +138,7 @@ onMounted(() => {
 
         <div class="form-divider" aria-hidden="true"></div>
 
-        <div class="transactions-table-wrap">
+        <div class="ems-table-wrap transactions-table-wrap">
             <Table
                 :data="filteredTransactionRows"
                 :columns="transactionColumns"
@@ -152,6 +152,8 @@ onMounted(() => {
 
 .transaction-page {
     width: 100%;
+    max-width: 100%;
+    min-width: 0;
 }
 
 .transaction-title {
@@ -238,36 +240,6 @@ onMounted(() => {
 
 .transactions-table-wrap {
     margin-top: 1rem;
-    overflow-x: auto;
-    background: #ffffff;
-    border: 1px solid #e5e7eb;
-    border-radius: 12px;
-}
-
-
-:deep(.transactions-table .app-table) {
-    width: 100%;
-    min-width: var(--table-min-width);
-    border-collapse: collapse;
-}
-
-:deep(.transactions-table .app-table th),
-:deep(.transactions-table .app-table td) {
-    padding: 14px 16px;
-    border-bottom: 1px solid #f1f5f9;
-    text-align: left;
-    font-size: 0.875rem;
-    color: #1f2937;
-}
-
-:deep(.transactions-table .app-table th) {
-    background: #f8fafc;
-    color: #475569;
-    font-weight: 600;
-}
-
-:deep(.transactions-table .app-table tbody tr:last-child td) {
-    border-bottom: 0;
 }
 
 .search-icon {
@@ -338,10 +310,6 @@ onMounted(() => {
 
     .transaction-title {
         font-size: 0.9rem;
-    }
-
-    :deep(.transactions-table .app-table) {
-        min-width: var(--table-min-width);
     }
 }
 

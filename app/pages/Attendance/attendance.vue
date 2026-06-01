@@ -134,8 +134,8 @@ function onViewShiftHours() {
 
         <div class="attendance-divider" aria-hidden="true"></div>
 
-        <div class="attendance-table-wrap">
-            <table class="attendance-table">
+        <div class="ems-table-wrap attendance-table-wrap">
+            <table>
                 <thead>
                     <tr>
                         <th>Department</th>
@@ -180,6 +180,8 @@ function onViewShiftHours() {
 <style scoped>
 .attendance-page {
     width: 100%;
+    max-width: 100%;
+    min-width: 0;
 }
 
 .attendance-title {
@@ -302,12 +304,7 @@ function onViewShiftHours() {
 }
 
 .attendance-table-wrap {
-    width: 100%;
     margin-top: 1rem;
-    overflow-x: auto;
-    border: 1px solid #e5e7eb;
-    border-radius: 12px;
-    background: #ffffff;
 }
 
 .view-shift-hours-button {
@@ -329,31 +326,6 @@ function onViewShiftHours() {
 .shift-hours-icon {
     width: 14px;
     height: 14px;
-}
-
-.attendance-table {
-    width: 100%;
-    min-width: var(--table-min-width);
-    border-collapse: collapse;
-}
-
-.attendance-table th,
-.attendance-table td {
-    padding: 12px 14px;
-    border-bottom: 1px solid #f1f5f9;
-    font-size: 0.85rem;
-    color: #1f2937;
-    text-align: left;
-}
-
-.attendance-table th {
-    background: #f8fafc;
-    color: #475569;
-    font-weight: 600;
-}
-
-.attendance-table tbody tr:last-child td {
-    border-bottom: 0;
 }
 
 .actions-column {
@@ -432,10 +404,6 @@ function onViewShiftHours() {
     .clear-filter-button {
         width: 100%;
         max-width: var(--control-width);
-    }
-
-    .attendance-table {
-        min-width: var(--table-min-width);
     }
 
     .search-button {

@@ -76,3 +76,10 @@ function getCellValue(row: Record<string, unknown>, column: TableColumn): unknow
     </table>
   </div>
 </template>
+
+<style scoped>
+.app-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+</style>

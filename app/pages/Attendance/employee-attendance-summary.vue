@@ -147,8 +147,8 @@ onUnmounted(() => {
 
         <div class="form-divider" aria-hidden="true"></div>
 
-        <div class="summary-table-wrap">
-            <table class="summary-table">
+        <div class="ems-table-wrap summary-table-wrap">
+            <table>
                 <thead>
                     <tr>
                         <th>Present</th>
@@ -187,6 +187,8 @@ onUnmounted(() => {
 <style scoped>
 .summary-page {
     width: 100%;
+    max-width: 100%;
+    min-width: 0;
 }
 
 .summary-header {
@@ -290,37 +292,7 @@ onUnmounted(() => {
 }
 
 .summary-table-wrap {
-    width: 100%;
     margin-top: 0.9rem;
-    overflow-x: auto;
-    border: 1px solid #e5e7eb;
-    border-radius: 12px;
-    background: #ffffff;
-}
-
-.summary-table {
-    width: 100%;
-    min-width: var(--table-min-width);
-    border-collapse: collapse;
-}
-
-.summary-table th,
-.summary-table td {
-    padding: 12px 14px;
-    border-bottom: 1px solid #f1f5f9;
-    font-size: 0.85rem;
-    color: #1f2937;
-    text-align: left;
-}
-
-.summary-table th {
-    background: #f8fafc;
-    color: #475569;
-    font-weight: 600;
-}
-
-.summary-table tbody tr:last-child td {
-    border-bottom: 0;
 }
 
 .empty-state {
@@ -403,10 +375,6 @@ onUnmounted(() => {
 @media (max-width: 640px) {
     .summary-details {
         grid-template-columns: 1fr;
-    }
-
-    .summary-table {
-        min-width: var(--table-min-width);
     }
 
     .summary-filters {

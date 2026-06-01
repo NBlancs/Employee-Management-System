@@ -157,8 +157,8 @@ onUnmounted(() => {
       <p id="date">{{ currentDate }}</p>
     </div>
 
-    <div class="recent-attendance-table">
-      <table class="attendance-table" :aria-busy="isTableLoading ? 'true' : 'false'">
+    <div class="ems-table-wrap recent-attendance-table">
+      <table :aria-busy="isTableLoading ? 'true' : 'false'">
         <thead>
           <tr>
             <th>Full Name</th>
@@ -193,8 +193,8 @@ onUnmounted(() => {
       <h1 id="recent-transaction">Recent Transactions</h1>
     </div>
 
-    <div class="recent-attendance-table">
-      <table class="attendance-table" :aria-busy="isTableLoading ? 'true' : 'false'">
+    <div class="ems-table-wrap recent-attendance-table">
+      <table :aria-busy="isTableLoading ? 'true' : 'false'">
         <thead>
           <tr>
             <th>Transaction No.</th>
@@ -228,6 +228,12 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
+
+.dashboard {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
 
 .dashboard h1 {
   margin-bottom: 1rem;
@@ -266,16 +272,6 @@ onUnmounted(() => {
   margin-bottom: 0.75rem;
 }
 
-.recent-attendance-table {
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  padding: 0;
-  overflow: hidden;
-  /* Allow horizontal scroll on very small screens */
-  overflow-x: auto;
-}
-
 .loading-cell {
   height: 180px;
   border-bottom: 0 !important;
@@ -307,31 +303,6 @@ onUnmounted(() => {
   to {
     transform: rotate(360deg);
   }
-}
-
-.attendance-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.attendance-table th,
-.attendance-table td {
-  padding: 20px 20px;
-  border-bottom: 1px solid #f1f5f9;
-  font-size: 0.88rem;
-  color: #1f2937;
-  white-space: nowrap;
-}
-
-.attendance-table th {
-  font-weight: 600;
-  color: #475569;
-  background: #f8fafc;
-  text-align: left;
-}
-
-.attendance-table tbody tr:last-child td {
-  border-bottom: 0;
 }
 
 .status-cell-center {
@@ -417,38 +388,6 @@ onUnmounted(() => {
     max-width: 100%;
     flex-wrap: wrap;
     gap: 8px;
-  }
-
-  .recent-attendance-table :deep(table),
-  .recent-transaction-table :deep(table) {
-    width: 100%;
-    border-collapse: collapse;
-  }
-
-  .recent-attendance-table :deep(th),
-  .recent-attendance-table :deep(td),
-  .recent-transaction-table :deep(th),
-  .recent-transaction-table :deep(td) {
-    padding: 0.75rem 1rem;
-    text-align: left;
-    border-bottom: 1px solid #f1f5f9;
-    font-size: 0.9rem;
-    color: #1f2937;
-  }
-
-  .recent-attendance-table :deep(th),
-  .recent-transaction-table :deep(th) {
-    background: #f8fafc;
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: #6b7280;
-    text-transform: none;
-    letter-spacing: normal;
-  }
-
-  .recent-attendance-table :deep(tbody tr:last-child td),
-  .recent-transaction-table :deep(tbody tr:last-child td){
-    border-bottom: none;
   }
 
 }

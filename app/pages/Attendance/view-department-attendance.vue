@@ -158,8 +158,8 @@ function exportExcel() {
 
         <div class="form-divider" aria-hidden="true"></div>
 
-        <div class="table-wrap">
-            <table class="attendance-table">
+        <div class="ems-table-wrap table-wrap">
+            <table>
                 <thead>
                     <tr>
                         <th>Name</th>
@@ -193,6 +193,8 @@ function exportExcel() {
 <style scoped>
 .view-department-attendance-page {
     width: 100%;
+    max-width: 100%;
+    min-width: 0;
 }
 
 .page-header {
@@ -431,38 +433,6 @@ function exportExcel() {
     border-color: #94a3b8;
 }
 
-.table-wrap {
-    width: 100%;
-    overflow-x: auto;
-    border: 1px solid #e5e7eb;
-    border-radius: 12px;
-    background: #ffffff;
-}
-
-.attendance-table {
-    width: 100%;
-    min-width: var(--table-min-width);
-    border-collapse: collapse;
-}
-
-.attendance-table th,
-.attendance-table td {
-    padding: 12px 14px;
-    border-bottom: 1px solid #f1f5f9;
-    font-size: 0.85rem;
-    color: #1f2937;
-    text-align: left;
-}
-
-.attendance-table th {
-    background: #f1f5f9;
-    color: #475569;
-    font-weight: 600;
-}
-
-.attendance-table tbody tr:last-child td {
-    border-bottom: 0;
-}
 
 .actions-column {
     width: 110px;

@@ -471,8 +471,8 @@ onUnmounted(() => {
 
         <div class="form-divider" aria-hidden="true"></div>
 
-        <div class="departments-table-wrap">
-            <table class="departments-table" :aria-busy="isTableLoading ? 'true' : 'false'">
+        <div class="ems-table-wrap departments-table-wrap">
+            <table :aria-busy="isTableLoading ? 'true' : 'false'">
                 <thead>
                     <tr>
                         <th>Department</th>
@@ -665,6 +665,8 @@ onUnmounted(() => {
 <style scoped>
 .department-page {
     width: 100%;
+    max-width: 100%;
+    min-width: 0;
     padding-bottom: 5.5rem;
 }
 
@@ -791,12 +793,6 @@ onUnmounted(() => {
     border-color: #94a3b8;
 }
 
-.departments-table-wrap {
-    overflow-x: auto;
-    border: 1px solid #e5e7eb;
-    border-radius: 12px;
-    background: #ffffff;
-}
 
 .loading-cell {
     height: 180px;
@@ -829,32 +825,6 @@ onUnmounted(() => {
     to {
         transform: rotate(360deg);
     }
-}
-
-.departments-table {
-    width: 100%;
-    border-collapse: collapse;
-    min-width: var(--table-min-width);
-    overflow: hidden;
-}
-
-.departments-table th,
-.departments-table td {
-    padding: 14px 16px;
-    border-bottom: 1px solid #f1f5f9;
-    font-size: 0.875rem;
-    color: #1f2937;
-    text-align: left;
-}
-
-.departments-table th {
-    background: #f8fafc;
-    color: #475569;
-    font-weight: 600;
-}
-
-.departments-table tbody tr:last-child td {
-    border-bottom: 0;
 }
 
 .actions-column {
@@ -1173,16 +1143,6 @@ onUnmounted(() => {
     .add-icon {
         width: 18px;
         height: 18px;
-    }
-
-    .departments-table {
-        min-width: var(--table-min-width);
-    }
-
-    .departments-table th,
-    .departments-table td {
-        padding: 12px 12px;
-        font-size: 0.8125rem;
     }
 }
 </style>

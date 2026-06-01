@@ -452,12 +452,12 @@ function formatTimeTo12Hour(timeString: string): string {
             <h1 class="shift-hours-title">Shift Hours Management</h1>
         </div>
 
-        <div class="shift-hours-table-wrap">
+        <div class="ems-table-wrap shift-hours-table-wrap">
             <div v-if="isLoadingShifts" class="loading-state">
                 <div class="spinner"></div>
                 <p class="loading-text">Loading shift hours...</p>
             </div>
-            <table v-else class="shift-hours-table">
+            <table v-else>
                 <thead>
                     <tr>
                         <th>Shift Start</th>
@@ -671,6 +671,8 @@ function formatTimeTo12Hour(timeString: string): string {
 <style scoped>
 .shift-hours-page {
     width: 100%;
+    max-width: 100%;
+    min-width: 0;
 }
 
 .shift-hours-alert-wrap {
@@ -722,37 +724,7 @@ function formatTimeTo12Hour(timeString: string): string {
 }
 
 .shift-hours-table-wrap {
-    width: 100%;
     margin-top: 1rem;
-    overflow-x: auto;
-    border: 1px solid #e5e7eb;
-    border-radius: 12px;
-    background: #ffffff;
-}
-
-.shift-hours-table {
-    width: 100%;
-    min-width: var(--table-min-width);
-    border-collapse: collapse;
-}
-
-.shift-hours-table th,
-.shift-hours-table td {
-    padding: 12px 14px;
-    border-bottom: 1px solid #f1f5f9;
-    font-size: 0.85rem;
-    color: #1f2937;
-    text-align: left;
-}
-
-.shift-hours-table th {
-    background: #f8fafc;
-    font-weight: 600;
-    color: #475569;
-}
-
-.shift-hours-table tbody tr:last-child td {
-    border-bottom: none;
 }
 
 .actions-column {
@@ -1163,10 +1135,6 @@ function formatTimeTo12Hour(timeString: string): string {
         flex-wrap: wrap;
     }
 
-    .shift-hours-table {
-        min-width: var(--table-min-width);
-    }
-
     .floating-button {
         right: 16px;
         bottom: 16px;
@@ -1190,12 +1158,6 @@ function formatTimeTo12Hour(timeString: string): string {
 }
 
 @media (max-width: 480px) {
-    .shift-hours-table th,
-    .shift-hours-table td {
-        padding: 10px 12px;
-        font-size: 0.8rem;
-    }
-
     .action-button {
         padding: 5px 8px;
         font-size: 0.75rem;

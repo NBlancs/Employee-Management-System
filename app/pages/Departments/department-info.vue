@@ -890,7 +890,7 @@ onUnmounted(() => {
             />
         </form>
 
-        <div class="positions-table-wrap">
+        <div class="ems-table-wrap positions-table-wrap">
             <Table
                 :data="filteredPositionRows"
                 :columns="positionTableColumns"
@@ -1213,6 +1213,8 @@ onUnmounted(() => {
 <style scoped>
 .department-info-page {
     width: 100%;
+    max-width: 100%;
+    min-width: 0;
     display: grid;
     align-content: start;
     justify-items: start;
@@ -1358,13 +1360,6 @@ onUnmounted(() => {
     color: #6b7280;
 }
 
-.positions-table-wrap {
-    width: 100%;
-    border: 1px solid #e5e7eb;
-    border-radius: 10px;
-    background: #ffffff;
-    overflow-x: auto;
-}
 
 .loading-modal-content {
     min-height: 120px;
@@ -1429,8 +1424,6 @@ onUnmounted(() => {
     font-size: 0.8rem;
     font-weight: 600;
     color: #6b7280;
-    text-transform: none;
-    letter-spacing: normal;
 }
 
 .positions-table :deep(tbody tr:last-child td) {

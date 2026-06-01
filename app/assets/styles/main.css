@@ -9,7 +9,6 @@
     --control-width-wide: clamp(200px, 42vw, 360px);
     --filter-stack-width: clamp(220px, 78vw, 380px);
     --search-btn-width: 112px;
-    --table-min-width: clamp(520px, 92vw, 780px);
 }
 
 *{
@@ -203,6 +202,85 @@ body{
         width: 100%;
         max-width: 420px;
     }
+}
+
+/* Unified table responsiveness (matches department-info positions table) */
+.ems-table-wrap,
+.positions-table-wrap,
+.employees-table-wrap,
+.departments-table-wrap,
+.transactions-table-wrap,
+.attendance-table-wrap,
+.shift-hours-table-wrap,
+.summary-table-wrap,
+.table-wrap,
+.recent-attendance-table {
+    width: 100%;
+    max-width: 100%;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    background: #ffffff;
+    overflow-x: auto;
+}
+
+.ems-table-wrap :is(table, .app-table),
+.positions-table-wrap :is(table, .app-table),
+.employees-table-wrap :is(table, .app-table),
+.departments-table-wrap :is(table, .app-table),
+.transactions-table-wrap :is(table, .app-table),
+.attendance-table-wrap :is(table, .app-table),
+.shift-hours-table-wrap :is(table, .app-table),
+.summary-table-wrap :is(table, .app-table),
+.table-wrap :is(table, .app-table),
+.recent-attendance-table :is(table, .app-table) {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.ems-table-wrap :is(th, td),
+.positions-table-wrap :is(th, td),
+.employees-table-wrap :is(th, td),
+.departments-table-wrap :is(th, td),
+.transactions-table-wrap :is(th, td),
+.attendance-table-wrap :is(th, td),
+.shift-hours-table-wrap :is(th, td),
+.summary-table-wrap :is(th, td),
+.table-wrap :is(th, td),
+.recent-attendance-table :is(th, td) {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid #f1f5f9;
+    font-size: 0.9rem;
+    color: #1f2937;
+}
+
+.ems-table-wrap :is(th),
+.positions-table-wrap :is(th),
+.employees-table-wrap :is(th),
+.departments-table-wrap :is(th),
+.transactions-table-wrap :is(th),
+.attendance-table-wrap :is(th),
+.shift-hours-table-wrap :is(th),
+.summary-table-wrap :is(th),
+.table-wrap :is(th),
+.recent-attendance-table :is(th) {
+    background: #f8fafc;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #6b7280;
+}
+
+.ems-table-wrap :is(tbody tr:last-child td),
+.positions-table-wrap :is(tbody tr:last-child td),
+.employees-table-wrap :is(tbody tr:last-child td),
+.departments-table-wrap :is(tbody tr:last-child td),
+.transactions-table-wrap :is(tbody tr:last-child td),
+.attendance-table-wrap :is(tbody tr:last-child td),
+.shift-hours-table-wrap :is(tbody tr:last-child td),
+.summary-table-wrap :is(tbody tr:last-child td),
+.table-wrap :is(tbody tr:last-child td),
+.recent-attendance-table :is(tbody tr:last-child td) {
+    border-bottom: none;
 }
 
 /* Global mobile search button behavior */
