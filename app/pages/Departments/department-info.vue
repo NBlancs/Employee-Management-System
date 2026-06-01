@@ -1679,11 +1679,7 @@ onUnmounted(() => {
     }
 
     .department-search .search-button {
-        width: var(--search-btn-width);
-        min-height: 44px;
-        font-size: 0.92rem;
         margin-left: 0;
-        align-self: flex-start;
     }
 
 }

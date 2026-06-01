@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-import { MagnifyingGlassIcon, EyeIcon, TrashIcon, PlusIcon, XMarkIcon } from '@heroicons/vue/24/outline'
+import { MagnifyingGlassIcon, EyeIcon, TrashIcon, PlusIcon, XMarkIcon, FunnelIcon } from '@heroicons/vue/24/outline'
 import IconInput from '~/components/IconInput.vue'
 import Button from '~/components/Button.vue'
 import Modal from '~/components/Modal.vue'
@@ -434,10 +434,11 @@ onUnmounted(() => {
             </Button>
 
             <div class="department-filter-control">
-                <div class="filter-dropdown">
+                <div class="filter-dropdown filter-dropdown--icon">
+                    <FunnelIcon class="filter-icon" />
                     <select
                         v-model="departmentFilter"
-                        class="filter-select"
+                        class="filter-select filter-select--with-icon"
                         :style="{ width: departmentFilterWidth }"
                         aria-label="Filter department"
                     >
@@ -702,10 +703,6 @@ onUnmounted(() => {
 
 .search-button {
     margin-inline: 0;
-    width: 96px;
-    min-height: 36px;
-    padding: 8px 10px;
-    font-size: 0.8rem;
 }
 
 .search-button-icon {
@@ -1109,8 +1106,11 @@ onUnmounted(() => {
     .search-button,
     .add-button,
     .department-filter-control {
-        width: var(--filter-stack-width);
         max-width: 100%;
+    }
+
+    .department-filter-control {
+        width: var(--filter-stack-width);
     }
 
     .filter-dropdown {
@@ -1118,17 +1118,14 @@ onUnmounted(() => {
         max-width: var(--control-width-wide);
     }
 
-    .search-button,
     .add-button {
-        min-height: 44px;
-        font-size: 0.92rem;
         justify-content: center;
     }
 
     /* Keep Search at the bottom of the stacked filters */
     .department-search :deep(.icon-input) { order: 1; width: var(--filter-stack-width); max-width: 100%; }
     .department-filter-control { order: 2; }
-    .search-button { order: 3; width: var(--search-btn-width); align-self: flex-start; }
+    .search-button { order: 3; }
 
     .add-button {
         width: 52px;

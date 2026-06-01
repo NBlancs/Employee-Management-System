@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { EyeIcon, ClockIcon } from '@heroicons/vue/24/outline'
+import { EyeIcon, ClockIcon, FunnelIcon, CalendarDaysIcon } from '@heroicons/vue/24/outline'
 import Button from '~/components/Button.vue'
 
 interface AttendanceRow {
@@ -78,13 +78,16 @@ function onViewShiftHours() {
         <form class="attendance-search" @submit.prevent="onSearchAttendance">
             <div class="date-field">
                 <label class="date-label" for="attendance-date">Select Date</label>
-                <input
-                    id="attendance-date"
-                    v-model="selectedDate"
-                    type="date"
-                    class="date-input"
-                    aria-label="Select attendance date"
-                />
+                <div class="filter-dropdown filter-dropdown--icon">
+                    <CalendarDaysIcon class="calendar-icon" aria-hidden="true" />
+                    <input
+                        id="attendance-date"
+                        v-model="selectedDate"
+                        type="date"
+                        class="date-input date-input--with-icon"
+                        aria-label="Select attendance date"
+                    />
+                </div>
             </div>
 
             <Button
@@ -98,17 +101,20 @@ function onViewShiftHours() {
             <div class="department-field">
                 <label class="date-label" for="attendance-department">Department</label>
                 <div class="department-filter-control">
-                    <select
-                        id="attendance-department"
-                        v-model="selectedDepartment"
-                        class="department-select"
-                        aria-label="Filter attendance by department"
-                    >
-                        <option value="">All Departments</option>
-                        <option v-for="department in departmentOptions" :key="department" :value="department">
-                            {{ department }}
-                        </option>
-                    </select>
+                    <div class="filter-dropdown filter-dropdown--icon">
+                        <FunnelIcon class="filter-icon" />
+                        <select
+                            id="attendance-department"
+                            v-model="selectedDepartment"
+                            class="department-select filter-select--with-icon"
+                            aria-label="Filter attendance by department"
+                        >
+                            <option value="">All Departments</option>
+                            <option v-for="department in departmentOptions" :key="department" :value="department">
+                                {{ department }}
+                            </option>
+                        </select>
+                    </div>
 
                     <button
                         v-if="selectedDepartment"
@@ -297,10 +303,6 @@ function onViewShiftHours() {
 
 .search-button {
     margin-inline: 0;
-    width: 96px;
-    min-height: 36px;
-    padding: 8px 10px;
-    font-size: 0.8rem;
 }
 
 .attendance-table-wrap {
@@ -377,7 +379,6 @@ function onViewShiftHours() {
 
     .date-field,
     .department-field,
-    .search-button,
     .view-shift-hours-button {
         margin-left: 0;
         width: var(--filter-stack-width);
@@ -404,12 +405,6 @@ function onViewShiftHours() {
     .clear-filter-button {
         width: 100%;
         max-width: var(--control-width);
-    }
-
-    .search-button {
-        min-height: 44px;
-        font-size: 0.92rem;
-        width: var(--search-btn-width);
     }
 
     /* Button order: Date -> Department -> View -> Search (bottom) */

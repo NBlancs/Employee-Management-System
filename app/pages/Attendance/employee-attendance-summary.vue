@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ArrowLeftIcon } from '@heroicons/vue/24/outline'
+import { ArrowLeftIcon, CalendarDaysIcon } from '@heroicons/vue/24/outline'
 import { computed, onUnmounted, ref } from 'vue'
 import Button from '~/components/Button.vue'
 
@@ -126,13 +126,16 @@ onUnmounted(() => {
         <form class="summary-filters" @submit.prevent="handleSearch">
             <div class="date-field">
                 <label class="date-label" for="summary-date">Date</label>
-                <input
-                    id="summary-date"
-                    v-model="selectedDate"
-                    type="date"
-                    class="date-input"
-                    aria-label="Select summary date"
-                />
+                <div class="filter-dropdown filter-dropdown--icon">
+                    <CalendarDaysIcon class="calendar-icon" aria-hidden="true" />
+                    <input
+                        id="summary-date"
+                        v-model="selectedDate"
+                        type="date"
+                        class="date-input date-input--with-icon"
+                        aria-label="Select summary date"
+                    />
+                </div>
             </div>
 
             <Button
@@ -272,10 +275,6 @@ onUnmounted(() => {
 
 .search-button {
     margin-inline: 0;
-    width: 96px;
-    min-height: 36px;
-    padding: 8px 10px;
-    font-size: 0.8rem;
 }
 
 .clear-button {
@@ -384,18 +383,12 @@ onUnmounted(() => {
 
     .date-field,
     .date-input,
-    .search-button,
     .clear-button {
         width: 100%;
     }
 
     .date-input {
         min-width: 0;
-    }
-
-    .search-button,
-    .clear-button {
-        min-height: 44px;
     }
 
     .summary-title {

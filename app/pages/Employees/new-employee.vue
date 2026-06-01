@@ -14,6 +14,13 @@ type CreatedEmployeePayload = {
     cardNumber: string
 }
 
+type EmployeeIdentity = {
+    firstName: string
+    middleName: string
+    lastName: string
+    suffix: string
+}
+
 type DepartmentOption = {
     department_id: number
     department_name: string
@@ -95,6 +102,7 @@ const showLoadingModal = ref(false)
 const departments = ref<DepartmentOption[]>([])
 const workHours = ref<WorkHourOption[]>([])
 const existingUsernames = ref<string[]>([])
+const existingEmployeeIdentities = ref<EmployeeIdentity[]>([])
 const showValidationAlert = ref(false)
 const validationAlertMessage = ref('')
 let validationAlertTimer: ReturnType<typeof setTimeout> | null = null
@@ -188,6 +196,48 @@ function formatTwentyFourHourToMeridiem(value: string) {
 
 function normalizeUsername(value: string) {
     return value.trim().toLowerCase()
+}
+
+function normalizeNamePart(value: string) {
+    return value.trim().toLowerCase()
+}
+
+function getEmployeeIdentityKey(identity: EmployeeIdentity) {
+    return [
+        normalizeNamePart(identity.firstName),
+        normalizeNamePart(identity.middleName),
+        normalizeNamePart(identity.lastName),
+        normalizeNamePart(identity.suffix),
+    ].join('|')
+}
+
+function extractEmployeeIdentity(employee: any): EmployeeIdentity | null {
+    const raw = employee?.raw ?? employee
+    const info = raw?.user_informations ?? {}
+
+    const firstName = String(info.first_name ?? raw?.firstName ?? '').trim()
+    const middleName = String(info.middle_name ?? raw?.middleName ?? '').trim()
+    const lastName = String(info.last_name ?? raw?.lastName ?? '').trim()
+    const suffix = String(info.suffix ?? raw?.suffix ?? '').trim()
+
+    if (!firstName && !middleName && !lastName) {
+        return null
+    }
+
+    return { firstName, middleName, lastName, suffix }
+}
+
+function isDuplicateEmployeeIdentity() {
+    const key = getEmployeeIdentityKey({
+        firstName: form.value.firstName,
+        middleName: form.value.middleName,
+        lastName: form.value.lastName,
+        suffix: form.value.suffix,
+    })
+
+    return existingEmployeeIdentities.value.some(
+        identity => getEmployeeIdentityKey(identity) === key,
+    )
 }
 
 function parseShiftTimeToMinutes(value: string) {
@@ -316,7 +366,7 @@ async function loadWorkHours() {
     }
 }
 
-async function loadExistingUsernames() {
+async function loadExistingEmployees() {
     try {
         const resp: any = await $fetch('/api/employees')
         const payload = resp?.data ?? resp
@@ -326,9 +376,13 @@ async function loadExistingUsernames() {
                 .map((employee: any) => employee?.raw?.user_accounts?.username ?? employee?.user_accounts?.username ?? '')
                 .filter(Boolean)
                 .map((value: string) => normalizeUsername(value))
+
+            existingEmployeeIdentities.value = payload
+                .map(extractEmployeeIdentity)
+                .filter((identity): identity is EmployeeIdentity => Boolean(identity))
         }
     } catch (err) {
-        console.error('Failed to load existing usernames:', err)
+        console.error('Failed to load existing employees:', err)
     }
 }
 
@@ -461,6 +515,11 @@ function handleSubmit() {
         return
     }
 
+    if (isDuplicateEmployeeIdentity()) {
+        showErrorAlert('An employee with the same first name, middle name, last name, and suffix already exists')
+        return
+    }
+
     showConfirmModal.value = true
 }
 
@@ -478,6 +537,12 @@ async function confirmSubmit() {
 
     if (!transactedById.value) {
         showErrorAlert('You must be signed in to create an employee')
+        showConfirmModal.value = false
+        return
+    }
+
+    if (isDuplicateEmployeeIdentity()) {
+        showErrorAlert('An employee with the same first name, middle name, last name, and suffix already exists')
         showConfirmModal.value = false
         return
     }
@@ -526,6 +591,15 @@ async function confirmSubmit() {
         })
 
         existingUsernames.value = [...existingUsernames.value, normalizeUsername(form.value.username)]
+        existingEmployeeIdentities.value = [
+            ...existingEmployeeIdentities.value,
+            {
+                firstName: form.value.firstName.trim(),
+                middleName: form.value.middleName.trim(),
+                lastName: form.value.lastName.trim(),
+                suffix: form.value.suffix.trim(),
+            },
+        ]
 
         showLoadingModal.value = false
         emit('back')
@@ -551,7 +625,7 @@ onMounted(async () => {
     await Promise.all([
         loadDepartments(),
         loadWorkHours(),
-        loadExistingUsernames(),
+        loadExistingEmployees(),
     ])
 })
 

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-import { PlusIcon, MagnifyingGlassIcon, EyeIcon, TrashIcon } from '@heroicons/vue/24/outline'
+import { PlusIcon, MagnifyingGlassIcon, EyeIcon, TrashIcon, FunnelIcon } from '@heroicons/vue/24/outline'
 import IconInput from '~/components/IconInput.vue'
 import Button from '~/components/Button.vue'
 import Badge from '~/components/Badge.vue'
@@ -402,10 +402,11 @@ onUnmounted(() => {
 
             <div class="department-and-card-filters">
                 <div class="department-filter-control">
-                    <div class="department-dropdown">
+                    <div class="department-dropdown filter-dropdown filter-dropdown--icon">
+                        <FunnelIcon class="filter-icon" />
                         <select
                             v-model="departmentQuery"
-                            class="filter-select"
+                            class="filter-select filter-select--with-icon"
                             :style="{ width: departmentSelectWidth }"
                             aria-label="Filter by department"
                         >
@@ -703,10 +704,6 @@ onUnmounted(() => {
 
 .search-button {
     margin-inline: 0;
-    width: 96px;
-    min-height: 36px;
-    padding: 8px 10px;
-    font-size: 0.8rem;
 }
 
 
@@ -728,12 +725,6 @@ onUnmounted(() => {
     .department-dropdown {
         width: var(--control-width-wide);
         max-width: 100%;
-    }
-
-    .search-button {
-        min-height: 36px;
-        padding: 8px 10px;
-        font-size: 0.8rem;
     }
 }
 
@@ -762,11 +753,6 @@ onUnmounted(() => {
 
     .search-button {
         order: 3;
-        width: var(--search-btn-width);
-        min-height: 44px;
-        padding: 8px 12px;
-        font-size: 0.92rem;
-        align-self: flex-start;
     }
 
     .department-filter-control {

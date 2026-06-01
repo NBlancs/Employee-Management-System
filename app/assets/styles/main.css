@@ -8,7 +8,14 @@
     --control-width: clamp(180px, 32vw, 280px);
     --control-width-wide: clamp(200px, 42vw, 360px);
     --filter-stack-width: clamp(220px, 78vw, 380px);
-    --search-btn-width: 112px;
+    --filter-icon-size: 14px;
+    --filter-icon-offset: 10px;
+    --filter-icon-padding-left: calc(var(--filter-icon-offset) + var(--filter-icon-size) + 10px);
+    --action-btn-min-height: 36px;
+    --action-btn-padding: 8px 14px;
+    --action-btn-font-size: 0.85rem;
+    --action-btn-font-weight: 600;
+    --action-btn-radius: 10px;
 }
 
 *{
@@ -283,16 +290,64 @@ body{
     border-bottom: none;
 }
 
-/* Global mobile search button behavior */
-.search-button {
+/* Filter / calendar icons for selects and date inputs */
+.filter-dropdown--icon {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    width: auto;
+    min-width: 0;
+    max-width: 100%;
+}
+
+.filter-icon,
+.calendar-icon {
+    position: absolute;
+    left: var(--filter-icon-offset);
+    top: 50%;
+    transform: translateY(-50%);
+    width: var(--filter-icon-size);
+    height: var(--filter-icon-size);
+    color: #6b7280;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.filter-select--with-icon,
+.date-input--with-icon,
+.department-select.filter-select--with-icon {
+    padding-left: var(--filter-icon-padding-left) !important;
+}
+
+/* Shared action button sizing (Search, Export PDF/Excel, etc.) */
+button.search-button,
+.search-button,
+button.export-button,
+.export-button {
     position: relative;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: var(--search-btn-width);
-    min-width: var(--search-btn-width);
-    max-width: var(--search-btn-width);
-    transition: width 0.2s ease, padding 0.2s ease;
+    box-sizing: border-box;
+    width: auto;
+    min-width: 0;
+    max-width: none;
+    height: auto;
+    min-height: var(--action-btn-min-height) !important;
+    max-height: none;
+    padding: var(--action-btn-padding) !important;
+    font-size: var(--action-btn-font-size) !important;
+    font-weight: var(--action-btn-font-weight) !important;
+    border-radius: var(--action-btn-radius) !important;
+    margin-inline: 0 !important;
+    white-space: nowrap;
+    flex-shrink: 0;
+    cursor: pointer;
+}
+
+button.export-button,
+.export-button {
+    border: 1px solid transparent;
 }
 
 @media (max-width: 640px) {
@@ -330,20 +385,13 @@ body{
         max-width: 100% !important;
     }
 
-    .search-button {
-        width: var(--search-btn-width) !important;
-        min-width: 88px !important;
-        min-height: 44px !important;
-        padding: 8px 12px !important;
-        border-radius: 12px !important;
-        white-space: nowrap !important;
-        overflow: hidden !important;
-        color: white !important;
-        position: relative !important;
-        margin-inline: 0 !important;
-        font-size: 0.92rem !important;
-        justify-self: start !important;
-        text-indent: 0 !important;
+    .employee-search .search-button,
+    .department-search .search-button,
+    .transaction-search .search-button,
+    .attendance-search .search-button,
+    .summary-filters .search-button {
+        width: 100% !important;
+        max-width: 100% !important;
     }
 }
 

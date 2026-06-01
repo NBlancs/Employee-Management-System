@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { MagnifyingGlassIcon, XMarkIcon } from '@heroicons/vue/24/outline'
+import { MagnifyingGlassIcon, XMarkIcon, CalendarDaysIcon } from '@heroicons/vue/24/outline'
 import IconInput from '~/components/IconInput.vue'
 import Button from '~/components/Button.vue'
 import Table from '~/components/Table.vue'
@@ -117,13 +117,16 @@ onMounted(() => {
             />
 
             <div class="date-field">
-                <input
-                    id="transaction-date"
-                    v-model="selectedDate"
-                    type="date"
-                    class="date-input"
-                    aria-label="Filter by transaction date"
-                />
+                <div class="filter-dropdown filter-dropdown--icon">
+                    <CalendarDaysIcon class="calendar-icon" aria-hidden="true" />
+                    <input
+                        id="transaction-date"
+                        v-model="selectedDate"
+                        type="date"
+                        class="date-input date-input--with-icon"
+                        aria-label="Filter by transaction date"
+                    />
+                </div>
 
                 <button
                     v-if="selectedDate"
@@ -171,10 +174,6 @@ onMounted(() => {
 
 .search-button {
     margin-inline: 0;
-    width: 96px;
-    min-height: 36px;
-    padding: 8px 10px;
-    font-size: 0.8rem;
 }
 
 .date-field {
@@ -262,12 +261,6 @@ onMounted(() => {
         grid-template-columns: 1fr auto;
         gap: 0.5rem;
     }
-
-    .search-button {
-        min-height: 36px;
-        padding: 8px 10px;
-        font-size: 0.8rem;
-    }
 }
 
 @media (max-width: 640px) {
@@ -301,11 +294,6 @@ onMounted(() => {
 
     .search-button {
         order: 3;
-        width: var(--search-btn-width);
-        min-height: 44px;
-        padding: 8px 12px;
-        font-size: 0.92rem;
-        align-self: flex-start;
     }
 
     .transaction-title {

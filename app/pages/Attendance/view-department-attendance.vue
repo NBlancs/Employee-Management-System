@@ -117,8 +117,9 @@ function exportExcel() {
         <div class="attendance-search">
             <div class="filter-control">
                 <div class="filter-row">
-                    <div class="filter-dropdown">
-                        <select v-model="monthsFilter" class="filter-select">
+                    <div class="filter-dropdown filter-dropdown--icon">
+                        <FunnelIcon class="filter-icon" />
+                        <select v-model="monthsFilter" class="filter-select filter-select--with-icon">
                             <option value="">Select Month</option>
                             <option v-for="month in monthOptions" :key="month" :value="month">
                                 {{ month }}
@@ -230,7 +231,7 @@ function exportExcel() {
 
 .attendance-search {
     display: grid;
-    grid-template-columns: minmax(240px, 360px);
+    grid-template-columns: minmax(320px, 480px);
     align-items: start;
     gap: 0.75rem;
     margin-bottom: 1rem;
@@ -244,10 +245,10 @@ function exportExcel() {
 }
 
 .filter-row {
-    display: flex;
-    align-items: center;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: stretch;
     gap: 0.75rem;
-    flex-wrap: wrap;
 }
 
 .filter-actions {
@@ -259,16 +260,6 @@ function exportExcel() {
 .export-button,
 .clear-filter-button {
     width: 100%;
-}
-
-.export-button {
-    min-height: 36px;
-    padding: 8px 14px;
-    border-radius: 10px;
-    border: 1px solid transparent;
-    font-size: 0.85rem;
-    font-weight: 600;
-    cursor: pointer;
 }
 
 .export-button--pdf {
@@ -301,26 +292,15 @@ function exportExcel() {
 
 .search-button {
     margin-inline: 0;
-    width: 96px;
-    min-height: 36px;
-    padding: 8px 10px;
-    font-size: 0.8rem;
-    border-radius: 10px;
 }
 
-.filter-dropdown {
+.filter-dropdown,
+.filter-dropdown--icon {
     position: relative;
     display: flex;
     align-items: center;
-    width: auto;
-    min-width: 180px;
-    max-width: 100%;
-}
-
-.filter-dropdown--icon {
-    position: relative;
     width: 100%;
-    max-width: 260px;
+    min-width: 0;
 }
 
 .filter-select {
@@ -341,19 +321,12 @@ function exportExcel() {
     padding-right: 2rem;
 }
 
-.filter-select--with-icon {
-    padding-left: 36px;
-}
-
 @media (max-width: 820px) {
     .attendance-search {
         grid-template-columns: 1fr;
         align-items: end;
         width: 100%;
-    }
-
-    .filter-dropdown {
-        max-width: none;
+        max-width: min(100%, var(--filter-stack-width));
     }
 }
 
@@ -369,23 +342,21 @@ function exportExcel() {
     }
 
     .filter-row {
-        flex-direction: column;
-        align-items: stretch;
+        grid-template-columns: 1fr;
     }
 
     .filter-dropdown,
     .filter-dropdown--icon {
-        flex: 1 1 auto;
-        min-width: 0;
         width: 100%;
-        max-width: none;
     }
 
     .filter-select {
         width: 100%;
         min-height: 44px;
         font-size: 0.95rem;
-        padding: 10px 12px;
+        padding-top: 10px;
+        padding-bottom: 10px;
+        padding-right: 12px;
     }
 
     .filter-actions {
@@ -396,17 +367,6 @@ function exportExcel() {
     .clear-filter-button {
         width: 100%;
     }
-}
-
-.filter-icon {
-    position: absolute;
-    left: 10px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 14px;
-    height: 14px;
-    color: #6b7280;
-    pointer-events: none;
 }
 
 .filter-select:focus {
