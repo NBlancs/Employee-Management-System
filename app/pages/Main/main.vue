@@ -170,14 +170,6 @@ function toggleSidebar() {
   isMobileNavHidden.value = !isMobileNavHidden.value
 }
 
-function hideMobileNav() {
-  if (!isMobileScreen.value || isMobileNavHidden.value) {
-    return
-  }
-
-  isMobileNavHidden.value = true
-}
-
 function openLogoutConfirm() {
   isLogoutConfirmOpen.value = true
 }
@@ -340,7 +332,7 @@ onUnmounted(() => {
       </template>
     </Modal>
 
-    <div class="main-shell" @click="hideMobileNav">
+    <div class="main-shell">
       <header class="main-header">
         <div class="header-left">
           <button
@@ -348,7 +340,7 @@ onUnmounted(() => {
             class="sidebar-toggle-btn"
             type="button"
             :aria-label="isMobileNavHidden ? 'Show side navigation icons' : 'Hide side navigation'"
-            @click.stop="toggleSidebar"
+            @click="toggleSidebar"
           >
             <Bars3Icon class="sidebar-toggle-icon" aria-hidden="true" />
           </button>
@@ -387,38 +379,24 @@ onUnmounted(() => {
 }
 
 .logout-btn {
-    border: 1px solid transparent;
-    border-radius: 10px;
-    padding: 8px 16px;
-    min-height: 36px;
-    cursor: pointer;
-    font-size: 0.875rem;
-    font-weight: 600;
-    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  padding: 8px 14px;
+  cursor: pointer;
+  font-weight: 500;
 }
 
 .logout-btn--no {
-    background: #eff6ff;
-    border-color: #dbeafe;
-    color: #1d4ed8;
-}
-
-.logout-btn--no:hover {
-    background: #dbeafe;
-    border-color: #bfdbfe;
-    color: #1e40af;
+  border-color: #d1d5db;
+  background: #ffffff;
+  color: #374151;
+  margin-right: 8px;
 }
 
 .logout-btn--yes {
-    background: #fef2f2;
-    border-color: #fecaca;
-    color: #b91c1c;
-}
-
-.logout-btn--yes:hover {
-    background: #fee2e2;
-    border-color: #fca5a5;
-    color: #991b1b;
+  border-color: #ef4444;
+  background: #ef4444;
+  color: #ffffff;
 }
 
 .logout-loading {
@@ -630,7 +608,6 @@ onUnmounted(() => {
   grid-template-rows: auto 1fr;
   background-color: white;
   min-height: 0;
-  min-width: 0;
 }
 
 .main-header {
@@ -778,9 +755,7 @@ onUnmounted(() => {
   display: grid;
   gap: 16px;
   min-height: 0;
-  min-width: 0;
   overflow-y: auto;
-  overflow-x: hidden;
 }
 
 .main-page--mobile {
