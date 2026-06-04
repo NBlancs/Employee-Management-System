@@ -77,25 +77,17 @@ function onViewShiftHours() {
         <form class="attendance-search" @submit.prevent="onSearchAttendance">
             <div class="date-field">
                 <label class="date-label" for="attendance-date">Select Date</label>
-                <div class="filter-dropdown filter-dropdown--icon">
+                <div class="filter-dropdown filter-dropdown--icon filter-dropdown--button">
                     <CalendarDaysIcon class="calendar-icon" aria-hidden="true" />
                     <input
                         id="attendance-date"
                         v-model="selectedDate"
                         type="date"
-                        class="date-input date-input--with-icon"
+                        class="date-input date-input--with-icon date-input--with-button"
                         aria-label="Select attendance date"
                     />
                 </div>
             </div>
-
-            <Button
-                type="submit"
-                variant="solid"
-                class="search-button"
-            >
-                Search
-            </Button>
 
             <div class="department-field">
                 <label class="date-label" for="attendance-department">Department</label>

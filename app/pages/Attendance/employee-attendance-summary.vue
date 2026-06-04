@@ -126,25 +126,21 @@ onUnmounted(() => {
         <form class="summary-filters" @submit.prevent="handleSearch">
             <div class="date-field">
                 <label class="date-label" for="summary-date">Date</label>
-                <div class="filter-dropdown filter-dropdown--icon">
+                <div class="filter-dropdown filter-dropdown--icon filter-dropdown--button">
                     <CalendarDaysIcon class="calendar-icon" aria-hidden="true" />
                     <input
                         id="summary-date"
                         v-model="selectedDate"
                         type="date"
-                        class="date-input date-input--with-icon"
+                        class="date-input date-input--with-icon date-input--with-button"
                         aria-label="Select summary date"
                     />
+                    <button type="submit" class="search-input-button" aria-label="Search summary">
+                        <MagnifyingGlassIcon class="search-input-icon" />
+                    </button>
                 </div>
             </div>
 
-            <Button
-                type="submit"
-                variant="solid"
-                class="search-button"
-            >
-                <span>Search</span>
-            </Button>
             <button v-if="selectedDate" type="button" class="clear-button" @click="handleClearDate">Clear</button>
         </form>
 

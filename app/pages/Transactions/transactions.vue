@@ -88,8 +88,10 @@ onMounted(() => {
                     placeholder="Search transaction"
                     aria-label="Search transaction"
                 >
-                    <template #icon>
-                        <MagnifyingGlassIcon class="search-icon" />
+                    <template #trailing>
+                        <button type="submit" class="search-input-button" aria-label="Search transaction">
+                            <MagnifyingGlassIcon class="search-input-icon" />
+                        </button>
                     </template>
                 </IconInput>
 
@@ -103,13 +105,6 @@ onMounted(() => {
                     <XMarkIcon class="clear-icon" />
                 </button>
             </div>
-
-            <Button
-                label="Search"
-                variant="solid"
-                type="submit"
-                class="search-button"
-            />
 
             <div class="date-field">
                 <div class="filter-dropdown filter-dropdown--icon">

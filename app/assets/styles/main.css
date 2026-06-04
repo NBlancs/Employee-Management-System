@@ -336,6 +336,61 @@ body{
     padding-left: var(--filter-icon-padding-left) !important;
 }
 
+.filter-dropdown--button {
+    position: relative;
+}
+
+.filter-dropdown--button .search-input-button,
+    .search-input-button {
+        position: absolute;
+        right: 0.5;
+        background: #2802ff;
+        color: white;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-color: transparent;
+        width: 60px;
+        height: 35px;
+        border-radius: 0 10px 10px 0;
+        cursor: pointer;
+        transition: background-color 0.2s ease, color 0.2s ease, transform 0.14s ease;
+    }
+
+    .search-input-button:hover {
+        background: #3b43ff;
+    }
+
+    .search-input-button svg,
+    .search-input-icon {
+        width: 16px;
+        height: 16px;
+        color: white;
+        font-size: 2rem;
+}
+
+.filter-dropdown--button,
+.icon-input,
+.icon-input-wrapper,
+.p-iconfield {
+    position: relative;
+    width: 100%;
+}
+
+.date-input--with-button {
+    padding-right: 44px !important;
+}
+
+.filter-select,
+.filter-select--with-icon,
+.department-select,
+.date-input,
+.date-input--with-icon {
+    font-size: 0.75rem !important;
+    font-size: 0.75rem;
+    /* min-height: 32px;
+    height: 32px; */
+}
 /* Floating action button – keep table actions clickable */
 .page-with-fab {
     padding-bottom: var(--fab-safe-space);
@@ -388,6 +443,21 @@ button.export-button,
     white-space: nowrap;
     flex-shrink: 0;
     cursor: pointer;
+}
+
+.app-button.search-button {
+    background: #eff6ff;
+    border-color: #dbeafe;
+    color: #1d4ed8;
+    min-height: 34px !important;
+    padding: 6px 42px !important;
+    font-size: 0.75rem !important;
+    font-weight: 450 !important;
+}
+
+.app-button.search-button:hover {
+    background: #569ffe;
+    border-color: #5d98e1;
 }
 
 button.export-button,

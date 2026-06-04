@@ -141,7 +141,6 @@ onUnmounted(() => {
 
 <template>
   <div class="dashboard">
-    <h1>Overview</h1>
     
     <div class="overview-grid">
       <OverviewCard 

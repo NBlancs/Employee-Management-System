@@ -419,18 +419,12 @@ onUnmounted(() => {
                 placeholder="Search department"
                 aria-label="Search department"
             >
-                <template #icon>
-                    <MagnifyingGlassIcon class="search-icon" />
+                <template #trailing>
+                    <button type="submit" class="search-input-button" @click="onSearch" aria-label="Search department">
+                        <MagnifyingGlassIcon class="search-input-icon" />
+                    </button>
                 </template>
             </IconInput>
-
-            <Button
-                variant="solid"
-                type="submit"
-                class="search-button"
-            >
-                <span>Search</span>
-            </Button>
 
             <div class="department-filter-control">
                 <div class="filter-dropdown filter-dropdown--icon">
@@ -698,7 +692,7 @@ th{
     display: grid;
     grid-template-columns: minmax(240px, 360px) auto auto 1fr auto;
     align-items: center;
-    gap: 0.75rem;
+    gap: 2rem;
     margin-bottom: 1rem;
 }
 

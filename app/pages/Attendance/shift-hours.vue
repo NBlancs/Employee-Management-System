@@ -734,6 +734,7 @@ th{
 
 .shift-hours-table-wrap {
     margin-top: 1rem;
+    padding-bottom: 0 !important;
 }
 
 .action-button {

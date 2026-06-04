@@ -150,11 +150,15 @@ const inputClasses = computed(() => ({
 
 .icon-input__trailing {
   right: 12px;
+  z-index: 2;
 }
 
-.icon-input__icon {
+.icon-input__icon,
+.search-input-icon,
+.icon-input__trailing svg {
   font-size: 1rem;
-  line-height: 1;
+  width: 18px;
+  height: 18px;
 }
 
 .icon-input__field {
@@ -187,20 +191,20 @@ const inputClasses = computed(() => ({
 
 .icon-input__field--sm {
   min-height: 36px;
-  padding: 8px 12px;
-  font-size: 0.875rem;
-}
+  padding: 6px 8px;
+  font-size: 0.8rem;
+} 
 
 .icon-input__field--md {
   min-height: 42px;
-  padding: 10px 12px;
-  font-size: 0.95rem;
+   padding: 6px 8px;
+  font-size: 0.8rem;
 }
 
 .icon-input__field--lg {
   min-height: 48px;
-  padding: 12px 14px;
-  font-size: 1rem;
+   padding: 6px 8px;
+  font-size: 0.8rem;
 }
 
 .icon-input__field--with-leading.icon-input__field--sm {
@@ -213,13 +217,41 @@ const inputClasses = computed(() => ({
 }
 
 .icon-input__field--with-trailing.icon-input__field--sm {
-  padding-right: 34px;
+  padding-right: 80px;
 }
 
 .icon-input__field--with-trailing.icon-input__field--md,
 .icon-input__field--with-trailing.icon-input__field--lg {
-  padding-right: 38px;
+  padding-right: 54px;
 }
+
+.icon-input__trailing button {
+  border: none;
+  background: #f8fafc;
+  color: #374151;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+  box-shadow: inset 0 0 0 1px rgba(226, 232, 240, 0.8);
+}
+
+.icon-input__trailing button:hover {
+  background: #eef2ff;
+  color: #3730a3;
+  transform: translateY(-1px);
+}
+
+.icon-input__trailing button:focus-visible {
+  outline: 2px solid rgba(99, 102, 241, 0.6);
+  outline-offset: 2px;
+}
+
 
 .icon-input__field--error {
   border-color: #dc2626;

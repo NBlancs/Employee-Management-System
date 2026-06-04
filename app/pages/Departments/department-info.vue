@@ -877,17 +877,12 @@ onUnmounted(() => {
                 aria-label="Search department"
                 class="search-input"
             >
-                <template #icon>
-                    <MagnifyingGlassIcon class="search-icon" />
+                <template #trailing>
+                    <button type="submit" class="search-input-button" aria-label="Search department">
+                        <MagnifyingGlassIcon class="search-input-icon" />
+                    </button>
                 </template>
             </IconInput>
-
-            <Button
-                label="Search"
-                variant="solid"
-                type="submit"
-                class="search-button"
-            />
         </form>
 
         <div class="ems-table-wrap positions-table-wrap">

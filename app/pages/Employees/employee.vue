@@ -336,6 +336,7 @@ function getEmployeeSearchCandidates(employee: EmployeeRow) {
 
 function onSearch() {
     isExactSearchMode.value = true
+
 }
 
 function clearDepartmentFilter() {
@@ -416,17 +417,12 @@ onUnmounted(() => {
                 placeholder="Search employee"
                 aria-label="Search employee"
             >
-                <template #icon>
-                    <MagnifyingGlassIcon class="search-icon" />
+                <template #trailing>
+                    <button type="submit" class="search-input-button" @submit="onSearch" aria-label="Search employee">
+                        <MagnifyingGlassIcon class="search-input-icon" />
+                    </button>
                 </template>
             </IconInput>
-
-            <Button
-                label="Search"
-                variant="solid"
-                type="submit"
-                class="search-button"
-            />
 
             <div class="department-and-card-filters">
                 <div class="department-filter-control">
@@ -732,7 +728,7 @@ td {
     grid-template-columns: 0.3fr auto minmax(220px, 0.45fr);
     align-items: end;
     justify-content: start;
-    gap: 0.75rem;
+    gap: 2rem;
 }
 
 .search-button {

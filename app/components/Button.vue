@@ -108,7 +108,10 @@ function onClick(event: MouseEvent) {
   transform: translateY(0) scale(1);
   transition: transform 0.14s ease, box-shadow 0.2s ease;
   will-change: transform;
+  font-size: 0.75rem !important;
 }
+
+
 
 .app-button--solid {
   background-color: #635bff;
