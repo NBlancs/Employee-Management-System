@@ -608,6 +608,8 @@ onUnmounted(() => {
 
 th {
     font-size: 0.75rem;
+    text-transform: uppercase;
+    
 }
 
 td {

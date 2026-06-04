@@ -159,7 +159,7 @@ onMounted(() => {
     grid-template-columns: 0.3fr auto minmax(220px, 0.45fr);
     align-items: end;
     justify-content: start;
-    gap: 0.75rem;
+    gap: 2rem;
 }
 
 .search-button {

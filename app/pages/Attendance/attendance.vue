@@ -76,7 +76,6 @@ function onViewShiftHours() {
 
         <form class="attendance-search" @submit.prevent="onSearchAttendance">
             <div class="date-field">
-                <label class="date-label" for="attendance-date">Select Date</label>
                 <div class="filter-dropdown filter-dropdown--icon filter-dropdown--button">
                     <CalendarDaysIcon class="calendar-icon" aria-hidden="true" />
                     <input
@@ -90,7 +89,6 @@ function onViewShiftHours() {
             </div>
 
             <div class="department-field">
-                <label class="date-label" for="attendance-department">Department</label>
                 <div class="department-filter-control">
                     <div class="filter-dropdown filter-dropdown--icon">
                         <FunnelIcon class="filter-icon" />
