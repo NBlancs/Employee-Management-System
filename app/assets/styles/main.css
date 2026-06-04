@@ -66,6 +66,7 @@ body{
     }
 }
 
+
 .content{
     background-color: white;
     min-height: calc(100dvh - clamp(42px, 4vw, 58px));

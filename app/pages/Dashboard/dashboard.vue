@@ -262,6 +262,16 @@ onUnmounted(() => {
   min-width: 0;
 }
 
+td {
+  font-size: 0.8rem;
+}
+
+th{
+  font-size: 0.75rem;
+  color: #64748b;
+  text-transform: uppercase;
+}
+
 .dashboard h1 {
   margin-bottom: 1rem;
   color: #1a1a1a;
@@ -271,18 +281,20 @@ onUnmounted(() => {
 #recent-attendance {
   margin-top: 1rem;
   margin: 0;
-  font-size: 1rem;
+  font-size: 0.8rem;
+  font-weight: 500;
 }
 
 #recent-transaction {
   margin-top: 1rem;
-  font-size: 1rem;
+  font-size: 0.8rem;
+  font-weight: 500;
 }
 
 #date {
   margin-top: 1rem;
-  font-size: 0.9rem;
   color: #64748b;
+  font-size: 0.8rem;
 }
 
 .recent-attendance-header {
@@ -348,7 +360,7 @@ onUnmounted(() => {
   min-width: 78px;
   padding: 4px 10px;
   border-radius: 999px;
-  font-size: 0.75rem;
+  font-size: 0.6rem;
   font-weight: 200;
   border: 1px solid transparent;
 }

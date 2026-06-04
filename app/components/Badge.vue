@@ -43,27 +43,28 @@ const badgeClasses = computed(() => ({
   justify-content: center;
   border-radius: 999px;
   border: 1px solid transparent;
-  font-weight: 200;
   line-height: 1;
   white-space: nowrap;
+  font-size: 0.6rem;
+  font-weight: 200;
 }
 
 .app-badge--sm {
   min-height: 22px;
   padding: 4px 10px;
-  font-size: 0.72rem;
+  font-size: 0.6rem;
 }
 
 .app-badge--md {
   min-height: 24px;
   padding: 5px 11px;
-  font-size: 0.78rem;
+  font-size: 0.6rem;
 }
 
 .app-badge--lg {
   min-height: 28px;
   padding: 6px 12px;
-  font-size: 0.84rem;
+  font-size: 0.6rem;
 }
 
 .app-badge--subtle.app-badge--green,

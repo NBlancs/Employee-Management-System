@@ -194,6 +194,16 @@ onUnmounted(() => {
     min-width: 0;
 }
 
+td {
+  font-size: 0.8rem;
+}
+
+th{
+  font-size: 0.75rem;
+  color: #64748b;
+  text-transform: uppercase;
+}
+
 .summary-header {
     display: flex;
     align-items: center;

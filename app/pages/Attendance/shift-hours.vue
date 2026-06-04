@@ -449,7 +449,6 @@ function formatTimeTo12Hour(timeString: string): string {
             <button class="back-button" @click="goBack">
                 <ArrowLeftIcon class="back-icon" />
             </button>
-            <h1 class="shift-hours-title">Shift Hours Management</h1>
         </div>
 
         <div class="ems-table-wrap shift-hours-table-wrap">
@@ -673,6 +672,16 @@ function formatTimeTo12Hour(timeString: string): string {
     width: 100%;
     max-width: 100%;
     min-width: 0;
+}
+
+td {
+  font-size: 0.8rem;
+}
+
+th{
+  font-size: 0.75rem;
+  color: #64748b;
+  text-transform: uppercase;
 }
 
 .shift-hours-alert-wrap {

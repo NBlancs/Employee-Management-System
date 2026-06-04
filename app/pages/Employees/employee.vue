@@ -408,7 +408,6 @@ onUnmounted(() => {
 
 <template>
     <div class="employee-page page-with-fab">
-        <h1 class="employee-title">Employee Management</h1>
 
         <form class="employee-search" @submit.prevent="onSearch">
             <IconInput
@@ -611,6 +610,14 @@ onUnmounted(() => {
     margin-bottom: 0.9rem;
 }
 
+th {
+    font-size: 0.75rem;
+}
+
+td {
+    font-size: 0.8rem;
+}
+
 .form-divider {
     width: 100%;
     height: 1px;
@@ -620,6 +627,7 @@ onUnmounted(() => {
 
 .employees-table-wrap {
     margin-top: 1rem;
+    padding-bottom: 0;
 }
 
 .loading-cell {

@@ -76,7 +76,7 @@ const filteredPositionAttendanceRows = computed(() => {
     const selectedYear = yearsFilter.value
 
     return positionAttendanceRows.value.filter((row) => {
-        const rowDate = new Date(row.dates.split(' - ')[0])
+        const rowDate = new Date(row.dates.split(' / ')[0])
         const rowMonth = rowDate.toLocaleString('default', { month: 'long' })
         const rowYear = rowDate.getFullYear().toString()
 
@@ -196,6 +196,16 @@ function exportExcel() {
     width: 100%;
     max-width: 100%;
     min-width: 0;
+}
+
+td {
+  font-size: 0.8rem;
+}
+
+th{
+  font-size: 0.75rem;
+  color: #64748b;
+  text-transform: uppercase;
 }
 
 .page-header {

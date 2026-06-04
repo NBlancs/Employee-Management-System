@@ -82,4 +82,14 @@ function getCellValue(row: Record<string, unknown>, column: TableColumn): unknow
   width: 100%;
   border-collapse: collapse;
 }
+
+td {
+  font-size: 0.8rem;
+}
+
+th{
+  font-size: 0.75rem;
+  color: #64748b;
+  text-transform: uppercase;
+}
 </style>

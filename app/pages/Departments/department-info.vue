@@ -1221,6 +1221,16 @@ onUnmounted(() => {
     gap: 0.75rem;
 }
 
+td {
+  font-size: 0.8rem;
+}
+
+th{
+  font-size: 0.75rem;
+  color: #64748b;
+  text-transform: uppercase;
+}
+
 .top-alert-wrap {
     position: fixed;
     top: 18px;
@@ -1348,6 +1358,10 @@ onUnmounted(() => {
 
 .fab-add-position:active {
     transform: translateY(0);
+}
+
+.positions-table-wrap {
+    padding-bottom: 0;
 }
 
 .search-icon {

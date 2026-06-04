@@ -79,7 +79,6 @@ onMounted(() => {
 
 <template>
     <section class="transaction-page">
-        <h1 class="transaction-title">Transaction Management</h1>
 
         <form class="transaction-search" @submit.prevent="handleSearch">
             <div class="search-input-wrap">

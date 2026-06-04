@@ -73,7 +73,6 @@ function onViewShiftHours() {
 
 <template>
     <section class="attendance-page">
-        <h1 class="attendance-title">Attendance Management</h1>
 
         <form class="attendance-search" @submit.prevent="onSearchAttendance">
             <div class="date-field">
@@ -188,6 +187,16 @@ function onViewShiftHours() {
     width: 100%;
     max-width: 100%;
     min-width: 0;
+}
+
+td {
+  font-size: 0.8rem;
+}
+
+th{
+  font-size: 0.75rem;
+  color: #64748b;
+  text-transform: uppercase;
 }
 
 .attendance-title {

@@ -411,7 +411,6 @@ onUnmounted(() => {
             />
         </div>
 
-        <h1 class="department-title">Department Management</h1>
 
         <form class="department-search" @submit.prevent="onSearch">
             <IconInput
@@ -670,6 +669,16 @@ onUnmounted(() => {
     min-width: 0;
 }
 
+td {
+  font-size: 0.8rem;
+}
+
+th{
+  font-size: 0.75rem;
+  color: #64748b;
+  text-transform: uppercase;
+}
+
 .top-alert-wrap {
     position: fixed;
     top: 18px;
@@ -698,6 +707,12 @@ onUnmounted(() => {
     height: 1px;
     margin-bottom: 1rem;
     background-color: #e5e7eb;
+}
+
+.departments-table-wrap {
+    margin-top: 1rem;
+    margin-bottom: 0;
+    padding-bottom: 0;
 }
 
 .search-button {
