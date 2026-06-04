@@ -299,7 +299,12 @@ onUnmounted(() => {
         </button>
       </div>
     </aside>
-
+      <div
+        v-if="isMobileScreen && !isMobileNavHidden"
+        class="sidebar-backdrop"
+        @click="toggleSidebar"
+        aria-hidden="true"
+      />
     <Modal
       v-model:open="isLogoutConfirmOpen"
       title="Confirm Logout"
@@ -445,6 +450,7 @@ onUnmounted(() => {
 }
 
 .main-page {
+  position: relative;
   height: 100dvh;
   display: grid;
   grid-template-columns: 260px minmax(0, 1fr);
@@ -455,6 +461,8 @@ onUnmounted(() => {
 }
 
 .main-sidebar {
+  position: relative;
+  z-index: 20;
   border-right: 1px solid #dbe4ff;
   background: #ffffff;
   display: flex;
@@ -841,6 +849,13 @@ onUnmounted(() => {
   overflow: hidden;
   visibility: hidden;
   opacity: 0;
+}
+
+.sidebar-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.32);
+  z-index: 10;
 }
 
 .main-page--mobile-nav-hidden .main-shell {
