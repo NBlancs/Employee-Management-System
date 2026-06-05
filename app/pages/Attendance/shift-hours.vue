@@ -119,30 +119,58 @@ function getBackendErrorMessage(err: any, fallback: string) {
     return err?.data?.message || err?.response?._data?.message || err?.message || fallback
 }
 
+// async function loadShifts() {
+//     isLoadingShifts.value = true
+//     loadingError.value = ''
+
+//     try {
+//         const resp: any = await $fetch('/api/work-hours')
+//         const payload = resp?.data ?? resp
+
+//         if (Array.isArray(payload)) {
+//             shifts.value = payload.map((wh: any) => ({
+//                 id: wh.work_hour_id,
+//                 work_hour_id: wh.work_hour_id,
+//                 start: wh.time_in,
+//                 end: wh.time_out,
+//                 time_in: wh.time_in,
+//                 time_out: wh.time_out,
+//                 classification: wh.classification,
+//             }))
+//         }
+//     } catch (err) {
+//         loadingError.value = getBackendErrorMessage(err, 'Failed to load shift hours')
+//     } finally {
+//         isLoadingShifts.value = false
+//     }
+// }
+
 async function loadShifts() {
     isLoadingShifts.value = true
     loadingError.value = ''
 
-    try {
-        const resp: any = await $fetch('/api/work-hours')
-        const payload = resp?.data ?? resp
+    setTimeout(() => {
+        shifts.value = [
+            {
+                id: 1,
+                start: '08:00',
+                end: '12:00',
+                time_in: '08:00',
+                time_out: '12:00',
+                classification: 'Morning',
+            },
+            {
+                id: 2,
+                start: '13:00',
+                end: '17:00',
+                time_in: '13:00',
+                time_out: '17:00',
+                classification: 'Afternoon',
+            },
+        ]
 
-        if (Array.isArray(payload)) {
-            shifts.value = payload.map((wh: any) => ({
-                id: wh.work_hour_id,
-                work_hour_id: wh.work_hour_id,
-                start: wh.time_in,
-                end: wh.time_out,
-                time_in: wh.time_in,
-                time_out: wh.time_out,
-                classification: wh.classification,
-            }))
-        }
-    } catch (err) {
-        loadingError.value = getBackendErrorMessage(err, 'Failed to load shift hours')
-    } finally {
         isLoadingShifts.value = false
-    }
+    }, 1000)
 }
 
 function goBack() {
@@ -210,96 +238,138 @@ function handleAddShift() {
     isConfirmationModalOpen.value = true
 }
 
+// function confirmAddShift() {
+//     isConfirmationModalOpen.value = false
+//     loadingAction.value = 'add'
+//     isLoadingModalOpen.value = true
+
+//     if (loadingTimer) {
+//         clearTimeout(loadingTimer)
+//     }
+
+//     loadingTimer = setTimeout(async () => {
+//         try {
+//             // Add morning shift
+//             const morningShift: any = await $fetch('/api/work-hours', {
+//                 method: 'POST',
+//                 body: {
+//                     transacted_by: transactedById.value,
+//                     time_in: morningShiftTimeIn.value,
+//                     time_out: morningShiftTimeOut.value,
+//                 },
+//             })
+
+//             const morningPayload = morningShift?.data ?? morningShift
+
+//             shifts.value.push({
+//                 id: morningPayload.work_hour_id,
+//                 work_hour_id: morningPayload.work_hour_id,
+//                 start: morningPayload.time_in,
+//                 end: morningPayload.time_out,
+//                 time_in: morningPayload.time_in,
+//                 time_out: morningPayload.time_out,
+//                 classification: morningPayload.classification,
+//             })
+
+//             // Add afternoon shift
+//             const afternoonShift: any = await $fetch('/api/work-hours', {
+//                 method: 'POST',
+//                 body: {
+//                     transacted_by: transactedById.value,
+//                     time_in: afternoonShiftTimeIn.value,
+//                     time_out: afternoonShiftTimeOut.value,
+//                 },
+//             })
+
+//             const afternoonPayload = afternoonShift?.data ?? afternoonShift
+
+//             shifts.value.push({
+//                 id: afternoonPayload.work_hour_id,
+//                 work_hour_id: afternoonPayload.work_hour_id,
+//                 start: afternoonPayload.time_in,
+//                 end: afternoonPayload.time_out,
+//                 time_in: afternoonPayload.time_in,
+//                 time_out: afternoonPayload.time_out,
+//                 classification: afternoonPayload.classification,
+//             })
+
+//             isLoadingModalOpen.value = false
+//             loadingAction.value = null
+//             isModalOpen.value = false
+//             morningShiftTimeIn.value = ''
+//             afternoonShiftTimeIn.value = ''
+//             morningShiftError.value = ''
+//             afternoonShiftError.value = ''
+
+//             showSuccessAlert.value = true
+//             successAlertMessage.value = 'Both shift hours added successfully.'
+
+//             if (alertTimer) {
+//                 clearTimeout(alertTimer)
+//             }
+
+//             alertTimer = setTimeout(() => {
+//                 showSuccessAlert.value = false
+//             }, 3000)
+//         } catch (err) {
+//             isLoadingModalOpen.value = false
+//             loadingAction.value = null
+//             const errorMessage = getBackendErrorMessage(err, 'Failed to add shift hours')
+//             console.error('Add shift error:', err)
+//             showSuccessAlert.value = true
+//             successAlertMessage.value = errorMessage
+
+//             if (alertTimer) {
+//                 clearTimeout(alertTimer)
+//             }
+
+//             alertTimer = setTimeout(() => {
+//                 showSuccessAlert.value = false
+//             }, 3000)
+//         }
+//     }, 1500)
+// }
+
 function confirmAddShift() {
     isConfirmationModalOpen.value = false
     loadingAction.value = 'add'
     isLoadingModalOpen.value = true
 
-    if (loadingTimer) {
-        clearTimeout(loadingTimer)
-    }
+    setTimeout(() => {
+        const morningId = Date.now()
 
-    loadingTimer = setTimeout(async () => {
-        try {
-            // Add morning shift
-            const morningShift: any = await $fetch('/api/work-hours', {
-                method: 'POST',
-                body: {
-                    transacted_by: transactedById.value,
-                    time_in: morningShiftTimeIn.value,
-                    time_out: morningShiftTimeOut.value,
-                },
-            })
+        shifts.value.push({
+            id: morningId,
+            start: morningShiftTimeIn.value,
+            end: morningShiftTimeOut.value,
+            time_in: morningShiftTimeIn.value,
+            time_out: morningShiftTimeOut.value,
+            classification: 'Morning',
+        })
 
-            const morningPayload = morningShift?.data ?? morningShift
+        shifts.value.push({
+            id: morningId + 1,
+            start: afternoonShiftTimeIn.value,
+            end: afternoonShiftTimeOut.value,
+            time_in: afternoonShiftTimeIn.value,
+            time_out: afternoonShiftTimeOut.value,
+            classification: 'Afternoon',
+        })
 
-            shifts.value.push({
-                id: morningPayload.work_hour_id,
-                work_hour_id: morningPayload.work_hour_id,
-                start: morningPayload.time_in,
-                end: morningPayload.time_out,
-                time_in: morningPayload.time_in,
-                time_out: morningPayload.time_out,
-                classification: morningPayload.classification,
-            })
+        isLoadingModalOpen.value = false
+        loadingAction.value = null
+        isModalOpen.value = false
 
-            // Add afternoon shift
-            const afternoonShift: any = await $fetch('/api/work-hours', {
-                method: 'POST',
-                body: {
-                    transacted_by: transactedById.value,
-                    time_in: afternoonShiftTimeIn.value,
-                    time_out: afternoonShiftTimeOut.value,
-                },
-            })
+        morningShiftTimeIn.value = ''
+        afternoonShiftTimeIn.value = ''
 
-            const afternoonPayload = afternoonShift?.data ?? afternoonShift
+        showSuccessAlert.value = true
+        successAlertMessage.value = 'Both shift hours added successfully.'
 
-            shifts.value.push({
-                id: afternoonPayload.work_hour_id,
-                work_hour_id: afternoonPayload.work_hour_id,
-                start: afternoonPayload.time_in,
-                end: afternoonPayload.time_out,
-                time_in: afternoonPayload.time_in,
-                time_out: afternoonPayload.time_out,
-                classification: afternoonPayload.classification,
-            })
-
-            isLoadingModalOpen.value = false
-            loadingAction.value = null
-            isModalOpen.value = false
-            morningShiftTimeIn.value = ''
-            afternoonShiftTimeIn.value = ''
-            morningShiftError.value = ''
-            afternoonShiftError.value = ''
-
-            showSuccessAlert.value = true
-            successAlertMessage.value = 'Both shift hours added successfully.'
-
-            if (alertTimer) {
-                clearTimeout(alertTimer)
-            }
-
-            alertTimer = setTimeout(() => {
-                showSuccessAlert.value = false
-            }, 3000)
-        } catch (err) {
-            isLoadingModalOpen.value = false
-            loadingAction.value = null
-            const errorMessage = getBackendErrorMessage(err, 'Failed to add shift hours')
-            console.error('Add shift error:', err)
-            showSuccessAlert.value = true
-            successAlertMessage.value = errorMessage
-
-            if (alertTimer) {
-                clearTimeout(alertTimer)
-            }
-
-            alertTimer = setTimeout(() => {
-                showSuccessAlert.value = false
-            }, 3000)
-        }
-    }, 1500)
+        setTimeout(() => {
+            showSuccessAlert.value = false
+        }, 3000)
+    }, 1200)
 }
 
 function removeShift(id: number) {
@@ -324,60 +394,85 @@ function cancelDeleteConfirmation() {
     pendingDeleteId.value = null
 }
 
+// function confirmDeleteShift() {
+//     if (pendingDeleteId.value === null) {
+//         return
+//     }
+
+//     isDeleteConfirmationModalOpen.value = false
+//     loadingAction.value = 'delete'
+//     isLoadingModalOpen.value = true
+
+//     if (loadingTimer) {
+//         clearTimeout(loadingTimer)
+//     }
+
+//     const deleteId = pendingDeleteId.value
+
+//     loadingTimer = setTimeout(async () => {
+//         try {
+//             await $fetch(`/api/work-hours/${deleteId}?transacted_by=${transactedById.value}`, {
+//                 method: 'DELETE',
+//             })
+
+//             shifts.value = shifts.value.filter(s => s.id !== deleteId)
+
+//             isLoadingModalOpen.value = false
+//             loadingAction.value = null
+//             pendingDeleteId.value = null
+
+//             showSuccessAlert.value = true
+//             successAlertMessage.value = 'Shift hour deleted successfully.'
+
+//             if (alertTimer) {
+//                 clearTimeout(alertTimer)
+//             }
+
+//             alertTimer = setTimeout(() => {
+//                 showSuccessAlert.value = false
+//             }, 3000)
+//         } catch (err) {
+//             isLoadingModalOpen.value = false
+//             loadingAction.value = null
+//             pendingDeleteId.value = null
+//             const errorMessage = getBackendErrorMessage(err, 'Failed to delete shift hour')
+//             showSuccessAlert.value = true
+//             successAlertMessage.value = errorMessage
+
+//             if (alertTimer) {
+//                 clearTimeout(alertTimer)
+//             }
+
+//             alertTimer = setTimeout(() => {
+//                 showSuccessAlert.value = false
+//             }, 3000)
+//         }
+//     }, 1500)
+// }
+
 function confirmDeleteShift() {
-    if (pendingDeleteId.value === null) {
-        return
-    }
+    if (pendingDeleteId.value === null) return
+
+    const deleteId = pendingDeleteId.value
 
     isDeleteConfirmationModalOpen.value = false
     loadingAction.value = 'delete'
     isLoadingModalOpen.value = true
 
-    if (loadingTimer) {
-        clearTimeout(loadingTimer)
-    }
+    setTimeout(() => {
+        shifts.value = shifts.value.filter(s => s.id !== deleteId)
 
-    const deleteId = pendingDeleteId.value
+        isLoadingModalOpen.value = false
+        loadingAction.value = null
+        pendingDeleteId.value = null
 
-    loadingTimer = setTimeout(async () => {
-        try {
-            await $fetch(`/api/work-hours/${deleteId}?transacted_by=${transactedById.value}`, {
-                method: 'DELETE',
-            })
+        showSuccessAlert.value = true
+        successAlertMessage.value = 'Shift hour deleted successfully.'
 
-            shifts.value = shifts.value.filter(s => s.id !== deleteId)
-
-            isLoadingModalOpen.value = false
-            loadingAction.value = null
-            pendingDeleteId.value = null
-
-            showSuccessAlert.value = true
-            successAlertMessage.value = 'Shift hour deleted successfully.'
-
-            if (alertTimer) {
-                clearTimeout(alertTimer)
-            }
-
-            alertTimer = setTimeout(() => {
-                showSuccessAlert.value = false
-            }, 3000)
-        } catch (err) {
-            isLoadingModalOpen.value = false
-            loadingAction.value = null
-            pendingDeleteId.value = null
-            const errorMessage = getBackendErrorMessage(err, 'Failed to delete shift hour')
-            showSuccessAlert.value = true
-            successAlertMessage.value = errorMessage
-
-            if (alertTimer) {
-                clearTimeout(alertTimer)
-            }
-
-            alertTimer = setTimeout(() => {
-                showSuccessAlert.value = false
-            }, 3000)
-        }
-    }, 1500)
+        setTimeout(() => {
+            showSuccessAlert.value = false
+        }, 3000)
+    }, 1200)
 }
 
 function closeAllModals() {

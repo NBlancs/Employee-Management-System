@@ -99,8 +99,48 @@ const form = ref({
 
 const showConfirmModal = ref(false)
 const showLoadingModal = ref(false)
-const departments = ref<DepartmentOption[]>([])
-const workHours = ref<WorkHourOption[]>([])
+// const departments = ref<DepartmentOption[]>([])
+
+const departments = ref<DepartmentOption []> ([
+    {
+        department_id: 1,
+        department_name: 'Human Resources',
+        department_head: null
+    },
+    {
+        department_id: 2,
+        department_name: 'Cyber Security',
+        department_head: null
+    }
+])
+
+const positions = ref<PositionOption []>([
+    {
+        position_id: 1,
+        department_id: 1,
+        position_name: 'Admin'
+    },
+    {
+        position_id: 2,
+        department_id: 1,
+        position_name: 'Generalist'
+    }
+])
+
+const workHours = ref<WorkHourOption[]>([
+    {
+        work_hour_id: 1,
+        time_in: '07:00 AM',
+        time_out: '11:00 AM',
+    },
+    {
+        work_hour_id: 2,
+        time_in: '12:00 PM',
+        time_out: '04:00 PM',
+    }
+])
+
+// const workHours = ref<WorkHourOption[]>([])
 const existingUsernames = ref<string[]>([])
 const existingEmployeeIdentities = ref<EmployeeIdentity[]>([])
 const showValidationAlert = ref(false)
@@ -123,14 +163,18 @@ const availableAfternoonShiftTimes = computed(() => {
     })
 })
 
+// const availablePositions = computed(() => {
+//     const selectedDepartmentId = Number(form.value.department)
+
+//     if (!selectedDepartmentId) {
+//         return []
+//     }
+
+//     return departments.value.find(department => department.department_id === selectedDepartmentId)?.positions ?? []
+// })
+
 const availablePositions = computed(() => {
-    const selectedDepartmentId = Number(form.value.department)
-
-    if (!selectedDepartmentId) {
-        return []
-    }
-
-    return departments.value.find(department => department.department_id === selectedDepartmentId)?.positions ?? []
+    return positions.value
 })
 
 const selectedDepartmentOption = computed(() => {
@@ -331,6 +375,25 @@ function showErrorAlert(message: string) {
     }, 3000)
 }
 
+const alertVariant = ref<'success' | 'error'>('error')
+const alertTitle = ref('Validation')
+
+function showSuccessAlert(message: string) {
+    alertTitle.value = 'Success'
+    alertVariant.value = 'success'
+    validationAlertMessage.value = message
+    showValidationAlert.value = true
+
+    if (validationAlertTimer) {
+        clearTimeout(validationAlertTimer)
+    }
+
+    validationAlertTimer = setTimeout(() => {
+        showValidationAlert.value = false
+    }, 3000)
+}
+
+
 function isDepartmentHeadPosition(position: PositionOption) {
     const normalizedName = position.position_name.trim().toLowerCase()
     return normalizedName === 'department head' || normalizedName.includes('head')
@@ -340,51 +403,51 @@ function isDepartmentHeadPositionDisabled(position: PositionOption) {
     return Boolean(selectedDepartmentOption.value?.department_head) && isDepartmentHeadPosition(position)
 }
 
-async function loadDepartments() {
-    try {
-        const resp: any = await $fetch('/api/departments')
-        const payload = resp?.data ?? resp
+// async function loadDepartments() {
+//     try {
+//         const resp: any = await $fetch('/api/departments')
+//         const payload = resp?.data ?? resp
 
-        if (Array.isArray(payload)) {
-            departments.value = payload
-        }
-    } catch (err) {
-        console.error('Failed to load departments:', err)
-    }
-}
+//         if (Array.isArray(payload)) {
+//             departments.value = payload
+//         }
+//     } catch (err) {
+//         console.error('Failed to load departments:', err)
+//     }
+// }
 
-async function loadWorkHours() {
-    try {
-        const resp: any = await $fetch('/api/work-hours')
-        const payload = resp?.data ?? resp
+// async function loadWorkHours() {
+//     try {
+//         const resp: any = await $fetch('/api/work-hours')
+//         const payload = resp?.data ?? resp
 
-        if (Array.isArray(payload)) {
-            workHours.value = payload
-        }
-    } catch (err) {
-        console.error('Failed to load work hours:', err)
-    }
-}
+//         if (Array.isArray(payload)) {
+//             workHours.value = payload
+//         }
+//     } catch (err) {
+//         console.error('Failed to load work hours:', err)
+//     }
+// }
 
-async function loadExistingEmployees() {
-    try {
-        const resp: any = await $fetch('/api/employees')
-        const payload = resp?.data ?? resp
+// async function loadExistingEmployees() {
+//     try {
+//         const resp: any = await $fetch('/api/employees')
+//         const payload = resp?.data ?? resp
 
-        if (Array.isArray(payload)) {
-            existingUsernames.value = payload
-                .map((employee: any) => employee?.raw?.user_accounts?.username ?? employee?.user_accounts?.username ?? '')
-                .filter(Boolean)
-                .map((value: string) => normalizeUsername(value))
+//         if (Array.isArray(payload)) {
+//             existingUsernames.value = payload
+//                 .map((employee: any) => employee?.raw?.user_accounts?.username ?? employee?.user_accounts?.username ?? '')
+//                 .filter(Boolean)
+//                 .map((value: string) => normalizeUsername(value))
 
-            existingEmployeeIdentities.value = payload
-                .map(extractEmployeeIdentity)
-                .filter((identity): identity is EmployeeIdentity => Boolean(identity))
-        }
-    } catch (err) {
-        console.error('Failed to load existing employees:', err)
-    }
-}
+//             existingEmployeeIdentities.value = payload
+//                 .map(extractEmployeeIdentity)
+//                 .filter((identity): identity is EmployeeIdentity => Boolean(identity))
+//         }
+//     } catch (err) {
+//         console.error('Failed to load existing employees:', err)
+//     }
+// }
 
 async function resolveWorkHourIds() {
     const morningTimeIn = form.value.morningTimeIn
@@ -523,6 +586,7 @@ function handleSubmit() {
     showConfirmModal.value = true
 }
 
+
 async function confirmSubmit() {
     if (!validateBasicFields()) {
         showConfirmModal.value = false
@@ -550,47 +614,96 @@ async function confirmSubmit() {
     showConfirmModal.value = false
     showLoadingModal.value = true
 
+    // try {
+    //     const { morningWorkHourId, afternoonWorkHourId } = await resolveWorkHourIds()
+
+    //     // const createdEmployeeResponse: any = await $fetch('/api/employees', {
+    //     //     method: 'POST',
+    //     //     body: {
+    //     //         transacted_by: transactedById.value,
+    //     //         department_id: Number(selectedDepartmentOption.value.department_id),
+    //     //         position_id: Number(selectedPositionOption.value.position_id),
+    //     //         morning_work_hour_id: morningWorkHourId,
+    //     //         afternoon_work_hour_id: afternoonWorkHourId,
+    //     //         first_name: form.value.firstName.trim(),
+    //     //         middle_name: form.value.middleName.trim(),
+    //     //         last_name: form.value.lastName.trim(),
+    //     //         suffix: form.value.suffix.trim(),
+    //     //         gender: form.value.gender,
+    //     //         birthdate: form.value.birthdate,
+    //     //         province: form.value.province.trim(),
+    //     //         city: form.value.city.trim(),
+    //     //         barangay: form.value.barangay.trim(),
+    //     //         zip_code: form.value.zipCode.trim(),
+    //     //         contact_number: form.value.contactNumber.trim(),
+    //     //         username: normalizeUsername(form.value.username),
+    //     //         password: form.value.password,
+    //     //     },
+    //     // })
+
+    //     // const payload = createdEmployeeResponse?.data ?? createdEmployeeResponse
+    //     // const createdId = payload?.employee_id ?? payload?.id ?? 0
+    //     // const middleInitial = form.value.middleName ? ` ${form.value.middleName.charAt(0)}.` : ''
+    //     // const fullName = `${form.value.lastName}, ${form.value.firstName}${middleInitial}`
+    //     const createdEmployeeResponse = {
+    //         employee_id: 1,
+    //         cards: {
+    //             card_number: '',
+    //         },
+    //     }
+
+    //     // emit('employeeCreated', {
+    //     //     id: createdId,
+    //     //     name: fullName,
+    //     //     department: selectedDepartmentOption.value.department_name,
+    //     //     cardStatus: 'No Card',
+    //     //     cardNumber: payload?.cards?.card_number ?? '',
+    //     // })
+
+    //     existingUsernames.value = [...existingUsernames.value, normalizeUsername(form.value.username)]
+    //     existingEmployeeIdentities.value = [
+    //         ...existingEmployeeIdentities.value,
+    //         {
+    //             firstName: form.value.firstName.trim(),
+    //             middleName: form.value.middleName.trim(),
+    //             lastName: form.value.lastName.trim(),
+    //             suffix: form.value.suffix.trim(),
+    //         },
+    //     ]
+
+    //     showLoadingModal.value = false
+    //     emit('back')
+    // } catch (err) {
+    //     showLoadingModal.value = false
+    //     showErrorAlert(getBackendErrorMessage(err, 'Failed to create employee'))
+    // }
+
     try {
         const { morningWorkHourId, afternoonWorkHourId } = await resolveWorkHourIds()
 
-        const createdEmployeeResponse: any = await $fetch('/api/employees', {
-            method: 'POST',
-            body: {
-                transacted_by: transactedById.value,
-                department_id: Number(selectedDepartmentOption.value.department_id),
-                position_id: Number(selectedPositionOption.value.position_id),
-                morning_work_hour_id: morningWorkHourId,
-                afternoon_work_hour_id: afternoonWorkHourId,
-                first_name: form.value.firstName.trim(),
-                middle_name: form.value.middleName.trim(),
-                last_name: form.value.lastName.trim(),
-                suffix: form.value.suffix.trim(),
-                gender: form.value.gender,
-                birthdate: form.value.birthdate,
-                province: form.value.province.trim(),
-                city: form.value.city.trim(),
-                barangay: form.value.barangay.trim(),
-                zip_code: form.value.zipCode.trim(),
-                contact_number: form.value.contactNumber.trim(),
-                username: normalizeUsername(form.value.username),
-                password: form.value.password,
+        const createdEmployeeResponse = {
+            employee_id: 1,
+            cards: {
+                card_number: '',
             },
-        })
+        }
 
-        const payload = createdEmployeeResponse?.data ?? createdEmployeeResponse
-        const createdId = payload?.employee_id ?? payload?.id ?? 0
-        const middleInitial = form.value.middleName ? ` ${form.value.middleName.charAt(0)}.` : ''
-        const fullName = `${form.value.lastName}, ${form.value.firstName}${middleInitial}`
+        // const payload = createdEmployeeResponse?.data ?? createdEmployeeResponse
+        // const createdId = payload?.employee_id ?? payload?.id ?? 0
 
-        emit('employeeCreated', {
-            id: createdId,
-            name: fullName,
-            department: selectedDepartmentOption.value.department_name,
-            cardStatus: 'No Card',
-            cardNumber: payload?.cards?.card_number ?? '',
-        })
+        // emit('employeeCreated', {
+        //     id: createdId,
+        //     name: fullName,
+        //     department: selectedDepartmentOption.value.department_name,
+        //     cardStatus: 'No Card',
+        //     cardNumber: payload?.cards?.card_number ?? '',
+        // })
 
-        existingUsernames.value = [...existingUsernames.value, normalizeUsername(form.value.username)]
+        existingUsernames.value = [
+            ...existingUsernames.value,
+            normalizeUsername(form.value.username),
+        ]
+
         existingEmployeeIdentities.value = [
             ...existingEmployeeIdentities.value,
             {
@@ -601,12 +714,23 @@ async function confirmSubmit() {
             },
         ]
 
+        // Keep loading modal visible for 2 seconds
+        await new Promise(resolve => setTimeout(resolve, 2000))
+
         showLoadingModal.value = false
-        emit('back')
+
+        // Success alert while backend is disabled
+        showSuccessAlert('Employee created successfully')
+
+        // Wait 3 seconds before returning
+        setTimeout(() => {
+            emit('back')
+        }, 3000)
     } catch (err) {
         showLoadingModal.value = false
         showErrorAlert(getBackendErrorMessage(err, 'Failed to create employee'))
     }
+
 }
 
 watch(() => form.value.department, () => {
@@ -621,13 +745,13 @@ watch(() => form.value.afternoonTimeIn, () => {
     form.value.afternoonTimeOut = getTimeOutForTimeIn(form.value.afternoonTimeIn)
 })
 
-onMounted(async () => {
-    await Promise.all([
-        loadDepartments(),
-        loadWorkHours(),
-        loadExistingEmployees(),
-    ])
-})
+// onMounted(async () => {
+//     await Promise.all([
+//         loadDepartments(),
+//         loadWorkHours(),
+//         loadExistingEmployees(),
+//     ])
+// })
 
 onUnmounted(() => {
     if (validationAlertTimer) {
@@ -639,11 +763,19 @@ onUnmounted(() => {
 <template>
     <div class="new-employee-page">
         <div v-if="showValidationAlert" class="validation-alert-wrap">
-            <Alert
+            <!-- <Alert
                 v-model:visible="showValidationAlert"
                 title="Validation"
                 :message="validationAlertMessage"
                 variant="error"
+                :dismissible="false"
+            /> -->
+
+            <Alert
+                v-model:visible="showValidationAlert"
+                :title="alertTitle"
+                :message="validationAlertMessage"
+                :variant="alertVariant"
                 :dismissible="false"
             />
         </div>
@@ -692,6 +824,14 @@ onUnmounted(() => {
                                     :disabled="isDepartmentHeadPositionDisabled(position)"
                                 >
                                     {{ position.position_name }}{{ isDepartmentHeadPositionDisabled(position) ? ' (Assigned)' : '' }}
+                                </option>
+
+                                <option
+                                    v-for="position in positions"
+                                    :key="position.position_id"
+                                    :value="String(position.position_id)"
+                                >
+                                    {{ position.position_name}}
                                 </option>
                             </select>
                         </div>

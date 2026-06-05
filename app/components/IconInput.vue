@@ -235,7 +235,6 @@ const inputClasses = computed(() => ({
   width: 34px;
   height: 34px;
   padding: 0;
-  border-radius: 999px;
   cursor: pointer;
   transition: background-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
   box-shadow: inset 0 0 0 1px rgba(226, 232, 240, 0.8);

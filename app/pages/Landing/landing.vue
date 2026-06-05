@@ -31,23 +31,23 @@ type LoginResponse = {
 
 async function onSubmit() {
   if (username.value === 'admin' && password.value === 'admin') {
-  authCookie.value = 'true'
-  userCookie.value = JSON.stringify({
-    employeeId: 1,
-    accountId: 1,
-    username: 'admin',
-    firstName: 'Admin',
-    middleName: '',
-    lastName: 'User',
-    suffix: '',
-    displayName: 'Admin User',
-    role: 'Admin',
-    department: 'human resources',
+    authCookie.value = 'true'
+    userCookie.value = JSON.stringify({
+      employeeId: 1,
+      accountId: 1,
+      username: 'admin',
+      firstName: 'Admin',
+      middleName: '',
+      lastName: 'User',
+      suffix: '',
+      displayName: 'Admin User',
+      role: 'Admin',
+      department: 'human resources',
   })
 
-  await navigateTo('/main?login=success&tab=overview')
-  return
-}
+    await navigateTo('/main?login=success&tab=overview')
+    return
+  }
 }
 
 // async function onSubmit() {

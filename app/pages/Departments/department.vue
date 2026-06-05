@@ -114,69 +114,151 @@ function closeDeleteDepartmentModal() {
     departmentToDelete.value = null
 }
 
+// async function loadDepartments() {
+//     const deptResp: any = await $fetch('/api/departments')
+//     const deptList = deptResp?.data ?? deptResp
+
+//     if (!Array.isArray(deptList)) {
+//         sharedDepartmentRows.value = []
+//         return
+//     }
+
+//     const departmentsWithHeads = await Promise.all(
+//         deptList.map(async (dept: DepartmentFromAPI) => {
+//             const headName = await getEmployeeHead(dept.department_head)
+
+//             return {
+//                 id: dept.department_id,
+//                 name: dept.department_name,
+//                 head: headName,
+//             }
+//         })
+//     )
+
+//     sharedDepartmentRows.value = departmentsWithHeads
+// }
+
 async function loadDepartments() {
-    const deptResp: any = await $fetch('/api/departments')
-    const deptList = deptResp?.data ?? deptResp
+  /*
+  const deptResp: any = await $fetch('/api/departments')
 
-    if (!Array.isArray(deptList)) {
-        sharedDepartmentRows.value = []
-        return
-    }
+  const deptList = deptResp?.data ?? deptResp
 
-    const departmentsWithHeads = await Promise.all(
-        deptList.map(async (dept: DepartmentFromAPI) => {
-            const headName = await getEmployeeHead(dept.department_head)
+  if (!Array.isArray(deptList)) {
+    sharedDepartmentRows.value = []
+    return
+  }
 
-            return {
-                id: dept.department_id,
-                name: dept.department_name,
-                head: headName,
-            }
-        })
-    )
+  const departmentsWithHeads = await Promise.all(
+    deptList.map(async (dept: DepartmentFromAPI) => {
+      const headName = await getEmployeeHead(dept.department_head)
 
-    sharedDepartmentRows.value = departmentsWithHeads
+      return {
+        id: dept.department_id,
+        name: dept.department_name,
+        head: headName,
+      }
+    })
+  )
+
+  sharedDepartmentRows.value = departmentsWithHeads
+  */
+
+  // Mock data for deployment testing
+  sharedDepartmentRows.value = [
+    {
+      id: 1,
+      name: 'Human Resources',
+      head: 'Dela Cruz, Juan',
+    },
+  ]
 }
+
+// async function deleteDepartment() {
+//     if (!departmentToDelete.value) return
+//     if (!transactedById.value) {
+//         alert("Cannot delete: User not identified.")
+//         return
+//     }
+
+//     const targetDepartmentId = departmentToDelete.value.id
+
+//     isDeleteDepartmentModalOpen.value = false
+//     isDeleteDepartmentLoadingModalOpen.value = true
+
+//     try {
+//         await $fetch(`/api/departments/${targetDepartmentId}`, {
+//             method: 'DELETE',
+//             body: {
+//                 transacted_by: transactedById.value,
+//             },
+//         })
+
+//         await loadDepartments()
+
+//         if (selectedDepartment.value?.id === targetDepartmentId) {
+//             selectedDepartment.value = null
+//         }
+
+//         isDepartmentDeletedAlertVisible.value = true
+
+//         setTimeout(() => {
+//             isDepartmentDeletedAlertVisible.value = false
+//         }, 2600)
+
+//     } catch (err: any) {
+//         alert(err?.data?.message || "Cannot delete department.")
+//     } finally {
+//         isDeleteDepartmentLoadingModalOpen.value = false
+//         departmentToDelete.value = null
+//     }
+// }
+
 
 async function deleteDepartment() {
-    if (!departmentToDelete.value) return
-    if (!transactedById.value) {
-        alert("Cannot delete: User not identified.")
-        return
+  if (!departmentToDelete.value) return
+
+  const targetDepartmentId = departmentToDelete.value.id
+
+  isDeleteDepartmentModalOpen.value = false
+  isDeleteDepartmentLoadingModalOpen.value = true
+
+  try {
+    /*
+    await $fetch(`/api/departments/${targetDepartmentId}`, {
+      method: 'DELETE',
+      body: {
+        transacted_by: transactedById.value,
+      },
+    })
+
+    await loadDepartments()
+    */
+
+    // Mock delete
+    await new Promise(resolve => setTimeout(resolve, 1200))
+
+    sharedDepartmentRows.value =
+      sharedDepartmentRows.value.filter(
+        department => department.id !== targetDepartmentId
+      )
+
+    if (selectedDepartment.value?.id === targetDepartmentId) {
+      selectedDepartment.value = null
     }
 
-    const targetDepartmentId = departmentToDelete.value.id
+    isDepartmentDeletedAlertVisible.value = true
 
-    isDeleteDepartmentModalOpen.value = false
-    isDeleteDepartmentLoadingModalOpen.value = true
-
-    try {
-        await $fetch(`/api/departments/${targetDepartmentId}`, {
-            method: 'DELETE',
-            body: {
-                transacted_by: transactedById.value,
-            },
-        })
-
-        await loadDepartments()
-
-        if (selectedDepartment.value?.id === targetDepartmentId) {
-            selectedDepartment.value = null
-        }
-
-        isDepartmentDeletedAlertVisible.value = true
-
-        setTimeout(() => {
-            isDepartmentDeletedAlertVisible.value = false
-        }, 2600)
-
-    } catch (err: any) {
-        alert(err?.data?.message || "Cannot delete department.")
-    } finally {
-        isDeleteDepartmentLoadingModalOpen.value = false
-        departmentToDelete.value = null
-    }
+    setTimeout(() => {
+      isDepartmentDeletedAlertVisible.value = false
+    }, 2600)
+  }
+  finally {
+    isDeleteDepartmentLoadingModalOpen.value = false
+    departmentToDelete.value = null
+  }
 }
+
 
 function handleAddDepartment() {
     newDepartmentName.value = ''
@@ -202,67 +284,142 @@ function closeAddDepartmentConfirmationModal() {
     isConfirmAddDepartmentModalOpen.value = false
 }
 
+// function addDepartment() {
+//     const normalizedName = newDepartmentName.value.trim()
+
+//     if (!normalizedName) {
+//         return
+//     }
+
+//     if (!transactedById.value) {
+//         return
+//     }
+
+//     const isDepartmentAlreadyRegistered = sharedDepartmentRows.value.some(
+//         (department) => department.name.toLowerCase() === normalizedName.toLowerCase(),
+//     )
+
+//     if (isDepartmentAlreadyRegistered) {
+//         closeAddDepartmentConfirmationModal()
+//         isDuplicateDepartmentAlertVisible.value = true
+//         return
+//     }
+
+//     isDuplicateDepartmentAlertVisible.value = false
+//     closeAddDepartmentConfirmationModal()
+//     isAddDepartmentLoadingModalOpen.value = true
+
+//     addDepartmentTimer = setTimeout(async () => {
+//         try {
+//             const response: any = await $fetch('/api/departments', {
+//                 method: 'POST',
+//                 body: {
+//                     department_name: normalizedName,
+//                     transacted_by: transactedById.value,
+//                 }
+//             })
+
+//             const newDepartmentData = response?.data ?? response
+
+//             if (!newDepartmentData?.department_id) {
+//                 throw new Error('Department was not created.')
+//             }
+
+//             await loadDepartments()
+
+//             isDepartmentAddedAlertVisible.value = true
+
+//             if (successAlertTimer) {
+//                 clearTimeout(successAlertTimer)
+//             }
+
+//             successAlertTimer = setTimeout(() => {
+//                 isDepartmentAddedAlertVisible.value = false
+//             }, 2600)
+
+//             closeAddDepartmentModal()
+//         } catch (err) {
+//             isDuplicateDepartmentAlertVisible.value = false
+//         } finally {
+//             isAddDepartmentLoadingModalOpen.value = false
+//             closeAddDepartmentConfirmationModal()
+//         }
+//     }, 1200)
+// }
+
 function addDepartment() {
-    const normalizedName = newDepartmentName.value.trim()
+  const normalizedName = newDepartmentName.value.trim()
 
-    if (!normalizedName) {
-        return
-    }
+  if (!normalizedName) {
+    return
+  }
 
-    if (!transactedById.value) {
-        return
-    }
-
-    const isDepartmentAlreadyRegistered = sharedDepartmentRows.value.some(
-        (department) => department.name.toLowerCase() === normalizedName.toLowerCase(),
+  const isDepartmentAlreadyRegistered =
+    sharedDepartmentRows.value.some(
+      department =>
+        department.name.toLowerCase() ===
+        normalizedName.toLowerCase()
     )
 
-    if (isDepartmentAlreadyRegistered) {
-        closeAddDepartmentConfirmationModal()
-        isDuplicateDepartmentAlertVisible.value = true
-        return
-    }
-
-    isDuplicateDepartmentAlertVisible.value = false
+  if (isDepartmentAlreadyRegistered) {
     closeAddDepartmentConfirmationModal()
-    isAddDepartmentLoadingModalOpen.value = true
+    isDuplicateDepartmentAlertVisible.value = true
+    return
+  }
 
-    addDepartmentTimer = setTimeout(async () => {
-        try {
-            const response: any = await $fetch('/api/departments', {
-                method: 'POST',
-                body: {
-                    department_name: normalizedName,
-                    transacted_by: transactedById.value,
-                }
-            })
+  isDuplicateDepartmentAlertVisible.value = false
 
-            const newDepartmentData = response?.data ?? response
+  closeAddDepartmentConfirmationModal()
 
-            if (!newDepartmentData?.department_id) {
-                throw new Error('Department was not created.')
-            }
+  isAddDepartmentLoadingModalOpen.value = true
 
-            await loadDepartments()
+  addDepartmentTimer = setTimeout(async () => {
+    try {
+      /*
+      const response: any = await $fetch('/api/departments', {
+        method: 'POST',
+        body: {
+          department_name: normalizedName,
+          transacted_by: transactedById.value,
+        },
+      })
 
-            isDepartmentAddedAlertVisible.value = true
+      const newDepartmentData =
+        response?.data ?? response
 
-            if (successAlertTimer) {
-                clearTimeout(successAlertTimer)
-            }
+      await loadDepartments()
+      */
 
-            successAlertTimer = setTimeout(() => {
-                isDepartmentAddedAlertVisible.value = false
-            }, 2600)
+      // Mock add
+      const nextId =
+        Math.max(
+          ...sharedDepartmentRows.value.map(d => d.id),
+          0
+        ) + 1
 
-            closeAddDepartmentModal()
-        } catch (err) {
-            isDuplicateDepartmentAlertVisible.value = false
-        } finally {
-            isAddDepartmentLoadingModalOpen.value = false
-            closeAddDepartmentConfirmationModal()
-        }
-    }, 1200)
+      sharedDepartmentRows.value.push({
+        id: nextId,
+        name: normalizedName,
+        head: 'Unassigned',
+      })
+
+      isDepartmentAddedAlertVisible.value = true
+
+      if (successAlertTimer) {
+        clearTimeout(successAlertTimer)
+      }
+
+      successAlertTimer = setTimeout(() => {
+        isDepartmentAddedAlertVisible.value = false
+      }, 2600)
+
+      closeAddDepartmentModal()
+    }
+    finally {
+      isAddDepartmentLoadingModalOpen.value = false
+      closeAddDepartmentConfirmationModal()
+    }
+  }, 1200)
 }
 
 function onSearch() {
@@ -320,26 +477,49 @@ watch(departmentFilter, (value) => {
     appliedDepartmentFilter.value = value
 })
 
+// async function getEmployeeHead(employeeId: number | null): Promise<string> {
+//     if (!employeeId) return 'Unassigned'
+    
+//     try {
+//         const empResp: any = await $fetch(`/api/employees/${employeeId}`)
+//         const emp = empResp?.data ?? empResp
+
+//         if (emp?.name) {
+//             return emp.name
+//         }
+
+//         if (emp?.raw?.user_informations) {
+//             const info = emp.raw.user_informations
+//             return `${info.last_name}, ${info.first_name}`
+//         }
+//     } catch (err) {
+//         // ignore error
+//     }
+    
+//     return 'Unassigned'
+// }
+
 async function getEmployeeHead(employeeId: number | null): Promise<string> {
-    if (!employeeId) return 'Unassigned'
-    
-    try {
-        const empResp: any = await $fetch(`/api/employees/${employeeId}`)
-        const emp = empResp?.data ?? empResp
+  /*
+  if (!employeeId) return 'Unassigned'
 
-        if (emp?.name) {
-            return emp.name
-        }
+  try {
+    const empResp: any = await $fetch(`/api/employees/${employeeId}`)
+    const emp = empResp?.data ?? empResp
 
-        if (emp?.raw?.user_informations) {
-            const info = emp.raw.user_informations
-            return `${info.last_name}, ${info.first_name}`
-        }
-    } catch (err) {
-        // ignore error
+    if (emp?.name) {
+      return emp.name
     }
-    
-    return 'Unassigned'
+
+    if (emp?.raw?.user_informations) {
+      const info = emp.raw.user_informations
+      return `${info.last_name}, ${info.first_name}`
+    }
+  } catch (err) {
+  }
+  */
+
+  return 'Unassigned'
 }
 
 onMounted(() => {

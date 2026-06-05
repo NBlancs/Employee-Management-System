@@ -102,14 +102,14 @@ function closeAlert() {
 }
 
 .app-alert__title {
-  font-size: 0.95rem;
-  font-weight: 600;
+  font-size: 0.7rem;
+  font-weight: 400;
   line-height: 1.2;
 }
 
 .app-alert__message {
   margin-top: 4px;
-  font-size: 0.88rem;
+  font-size: 0.6rem;
   line-height: 1.45;
 }
 

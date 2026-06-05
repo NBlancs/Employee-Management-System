@@ -35,10 +35,10 @@ let loadingTimer: ReturnType<typeof setTimeout> | null = null
 
 // Dashboard stats
 const dashboardStats = ref<DashboardStats>({
-  totalEmployees: 0,
-  totalPresent: 0,
+  totalEmployees: 10,
+  totalPresent: 10,
   totalAbsent: 0,
-  totalDepartments: 0,
+  totalDepartments: 1,
 })
 const isStatsLoading = ref(true)
 
