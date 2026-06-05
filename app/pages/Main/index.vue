@@ -9,6 +9,7 @@ import Department from '../Departments/department.vue';
 import DepartmentInfo from '../Departments/department-info.vue';
 import Attendance from '../Attendance/index.vue';
 import Transactions from '../Transactions/transactions.vue';
+import Reports from '../Reports/reports.vue';
 
 const selectedDepartmentId = ref<number | null>(null)
 const selectedEmployeeId = ref<number | null>(null)
@@ -84,6 +85,7 @@ definePageMeta({
                 />
                 <Attendance v-if="activeTab === 'attendance'"/>
                 <Transactions v-if="activeTab === 'transactions'"/>
+                <Reports v-if="activeTab === 'reports'"/>
             </template>
         </Main>
 </template>

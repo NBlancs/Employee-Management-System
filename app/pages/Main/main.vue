@@ -131,7 +131,7 @@ const navItems = [
   { label: 'Departments', icon:ShieldCheckIcon, id:'departments'},
   { label: 'Attendance', icon: CalendarDaysIcon, id: 'attendance' },
   { label: 'Transactions', icon: ClockIcon, id: 'transactions' },
-  
+  { label: 'Reports', icon: ChartBarSquareIcon, id: 'reports' },
 ]
 
 // Watch for route query changes
